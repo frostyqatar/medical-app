@@ -13,7 +13,10 @@ import { fetchGlucose, createGlucose, deleteGlucose, fetchLabs } from '@/api'
 import type { Glucose, Lab } from '@/api'
 
 const CONTEXTS = ['fasting', 'pre_meal', 'post_meal', 'random', 'bedtime']
-function contextLabel(t: string | null) { return t ? t.replace('_', ' ') : 'Unknown' }
+function contextLabel(t: string | null) { 
+  if (!t) return 'Unknown'
+  return t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
 function formatDate(ts: string) { return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) }
 function formatDateTime(ts: string) { return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }
 function glucoseColor(v: number) { if (v < 70 || v > 250) return 'text-red-600'; if (v > 180) return 'text-amber-600'; return 'text-green-600' }
@@ -125,8 +128,10 @@ export default function GlucoseMobile() {
           </CardContent></Card>
 
           <div className="space-y-2">
-            {[...sorted].reverse().map(g => (
-              <Card key={g.id} className="rounded-xl">
+            {[...sorted].reverse().map(g => {
+              const borderColor = g.value_mgdl < 70 ? 'border-l-red-500' : g.value_mgdl > 250 ? 'border-l-red-500' : g.value_mgdl > 180 ? 'border-l-amber-500' : 'border-l-green-500'
+              return (
+              <Card key={g.id} className={`rounded-xl border-l-4 ${borderColor}`}>
                 <CardContent className="p-3 flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -140,7 +145,8 @@ export default function GlucoseMobile() {
                   <button onClick={() => handleDelete(g.id)} className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-red-500 shrink-0"><X className="h-4 w-4" /></button>
                 </CardContent>
               </Card>
-            ))}
+              )
+            })}
           </div>
         </>
       )}

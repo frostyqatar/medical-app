@@ -13,6 +13,35 @@ import type { Vital } from '@/api'
 
 function formatDate(ts: string) { return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) }
 function formatDateTime(ts: string) { return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }
+function vitalColor(type: string, value: number | null): string {
+  if (value == null) return ''
+  if (type === 'bp_sys') {
+    if (value >= 180 || value < 90) return 'text-red-500'
+    if (value >= 140) return 'text-amber-500'
+    return ''
+  }
+  if (type === 'bp_dia') {
+    if (value >= 110) return 'text-red-500'
+    if (value >= 90) return 'text-amber-500'
+    return ''
+  }
+  if (type === 'hr') {
+    if (value < 50 || value > 110) return 'text-red-500'
+    if (value > 100) return 'text-amber-500'
+    return ''
+  }
+  if (type === 'temp_c') {
+    if (value >= 38) return 'text-red-500'
+    if (value >= 37.5) return 'text-amber-500'
+    return ''
+  }
+  if (type === 'spo2') {
+    if (value < 92) return 'text-red-500'
+    if (value <= 94) return 'text-amber-500'
+    return ''
+  }
+  return ''
+}
 
 export default function VitalsMobile() {
   const [vitals, setVitals] = useState<Vital[] | null>(null)
@@ -89,10 +118,10 @@ export default function VitalsMobile() {
           <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Latest &mdash; {formatDateTime(latest.measured_at)}</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-3">
-              <div><p className="text-[11px] text-muted-foreground">BP</p><p className="text-lg font-bold">{latest.bp_sys != null ? latest.bp_sys : 'N/A'}/{latest.bp_dia != null ? latest.bp_dia : 'N/A'}</p></div>
-              <div><p className="text-[11px] text-muted-foreground">HR</p><p className="text-lg font-bold">{latest.hr != null ? `${latest.hr} bpm` : 'N/A'}</p></div>
-              <div><p className="text-[11px] text-muted-foreground">Temp</p><p className="text-lg font-bold">{latest.temp_c != null ? `${latest.temp_c}°C` : 'N/A'}</p></div>
-              <div><p className="text-[11px] text-muted-foreground">SpO&sup2;</p><p className="text-lg font-bold">{latest.spo2 != null ? `${latest.spo2}%` : 'N/A'}</p></div>
+              <div><p className="text-[11px] text-muted-foreground">BP</p><p className={`text-lg font-bold ${vitalColor('bp_sys', latest.bp_sys)}`}>{latest.bp_sys != null ? latest.bp_sys : 'N/A'}/{latest.bp_dia != null ? latest.bp_dia : 'N/A'}</p></div>
+              <div><p className="text-[11px] text-muted-foreground">HR</p><p className={`text-lg font-bold ${vitalColor('hr', latest.hr)}`}>{latest.hr != null ? `${latest.hr} bpm` : 'N/A'}</p></div>
+              <div><p className="text-[11px] text-muted-foreground">Temp</p><p className={`text-lg font-bold ${vitalColor('temp_c', latest.temp_c)}`}>{latest.temp_c != null ? `${latest.temp_c}°C` : 'N/A'}</p></div>
+              <div><p className="text-[11px] text-muted-foreground">SpO&sup2;</p><p className={`text-lg font-bold ${vitalColor('spo2', latest.spo2)}`}>{latest.spo2 != null ? `${latest.spo2}%` : 'N/A'}</p></div>
               <div><p className="text-[11px] text-muted-foreground">Weight</p><p className="text-lg font-bold">{latest.weight_kg != null ? `${latest.weight_kg} kg` : 'N/A'}</p></div>
             </div>
           </CardContent>
