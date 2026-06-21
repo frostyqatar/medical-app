@@ -55,9 +55,9 @@ export default function SymptomsMobile() {
     const prev = filtered.slice(idx + 1).find(s => s.type === sym.type)
     if (!prev || prev.severity == null || sym.severity == null) return null
     const diff = sym.severity - prev.severity
-    if (diff > 1) return <TrendingUp className="h-3.5 w-3.5 text-red-500" title="Worsening" />
-    if (diff < -1) return <TrendingDown className="h-3.5 w-3.5 text-green-500" title="Improving" />
-    if (Math.abs(diff) <= 1) return <Minus className="h-3.5 w-3.5 text-muted-foreground" title="Stable" />
+    if (diff > 1) return <TrendingUp className="h-3.5 w-3.5 text-red-500" />
+    if (diff < -1) return <TrendingDown className="h-3.5 w-3.5 text-green-500" />
+    if (Math.abs(diff) <= 1) return <Minus className="h-3.5 w-3.5 text-muted-foreground" />
     return null
   }
 
