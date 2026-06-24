@@ -157,7 +157,7 @@ export default function VitalsMobile() {
   const gradientDefs = (
     <defs>
       <linearGradient id="gradSys" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} /><stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} /></linearGradient>
-      <linearGradient id="gradDia" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.15} /><stop offset="100%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.02} /></linearGradient>
+      <linearGradient id="gradDia" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a855f7" stopOpacity={0.2} /><stop offset="100%" stopColor="#a855f7" stopOpacity={0.02} /></linearGradient>
       <linearGradient id="gradHr" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ef4444" stopOpacity={0.15} /><stop offset="100%" stopColor="#ef4444" stopOpacity={0.02} /></linearGradient>
       <linearGradient id="gradTemp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f97316" stopOpacity={0.2} /><stop offset="100%" stopColor="#f97316" stopOpacity={0.02} /></linearGradient>
       <linearGradient id="gradSpo2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#22c55e" stopOpacity={0.2} /><stop offset="100%" stopColor="#22c55e" stopOpacity={0.02} /></linearGradient>
@@ -165,7 +165,7 @@ export default function VitalsMobile() {
     </defs>
   )
 
-  const sharedChartProps = { margin: { top: 5, right: 15, left: -10, bottom: 0 } }
+  const sharedChartProps = { margin: { top: 5, right: 30, left: -10, bottom: 0 } }
 
   return (
     <div className="space-y-4">
@@ -233,7 +233,7 @@ export default function VitalsMobile() {
           {chartsOpen && (
             <>
           {hasBp && (
-            <Card className="rounded-xl"><CardContent className="p-3">
+            <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Activity className="h-3.5 w-3.5" />Blood Pressure (mmHg)</p>
               <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
@@ -241,16 +241,17 @@ export default function VitalsMobile() {
                   {gradientDefs}
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} width={35} yAxisId="left" />
+                  <YAxis yAxisId="left" tick={{ fontSize: 10 }} width={35} domain={[0, 250]} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} width={35} domain={[0, 160]} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
                   <ReferenceArea y1={180} y2={250} yAxisId="left" fill="#ef4444" fillOpacity={0.06} />
                   <ReferenceArea y1={140} y2={180} yAxisId="left" fill="#f97316" fillOpacity={0.06} />
                   <ReferenceArea y1={0} y2={90} yAxisId="left" fill="#ef4444" fillOpacity={0.06} />
-                  <ReferenceLine y={140} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
-                  <ReferenceLine y={90} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
+                  <ReferenceLine y={140} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} yAxisId="left" />
+                  <ReferenceLine y={90} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} yAxisId="left" />
                   <Area type="monotone" dataKey="bp_sys" fill="url(#gradSys)" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} connectNulls name="Systolic" yAxisId="left" />
-                  <Line type="monotone" dataKey="bp_dia" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={false} connectNulls name="Diastolic" yAxisId="left" />
+                  <Area type="monotone" dataKey="bp_dia" fill="url(#gradDia)" stroke="#a855f7" strokeWidth={2} dot={false} connectNulls name="Diastolic" yAxisId="right" />
                   <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </LineChart>
               </ResponsiveContainer>
@@ -258,7 +259,7 @@ export default function VitalsMobile() {
             </CardContent></Card>
           )}
           {hasHr && (
-            <Card className="rounded-xl"><CardContent className="p-3">
+            <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Heart className="h-3.5 w-3.5" />Heart Rate (bpm)</p>
               <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
@@ -281,7 +282,7 @@ export default function VitalsMobile() {
             </CardContent></Card>
           )}
           {hasTemp && (
-            <Card className="rounded-xl"><CardContent className="p-3">
+            <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Thermometer className="h-3.5 w-3.5" />Temperature (°C)</p>
               <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
@@ -303,7 +304,7 @@ export default function VitalsMobile() {
             </CardContent></Card>
           )}
           {hasSpo2 && (
-            <Card className="rounded-xl"><CardContent className="p-3">
+            <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Waves className="h-3.5 w-3.5" />SpO₂ (%)</p>
               <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
@@ -325,7 +326,7 @@ export default function VitalsMobile() {
             </CardContent></Card>
           )}
           {hasWeight && (
-            <Card className="rounded-xl"><CardContent className="p-3">
+            <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Scale className="h-3.5 w-3.5" />Weight (kg)</p>
               <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
@@ -350,7 +351,7 @@ export default function VitalsMobile() {
           <div className="space-y-2">
             {sorted.map(v => (
               <Card key={v.id} className="rounded-xl">
-                <CardContent className="p-3">
+                <CardContent className="p-3 overflow-visible">
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <span className="text-[11px] text-muted-foreground">{formatDateTime(v.measured_at)}</span>
                     <div className="flex items-center gap-1 shrink-0">
