@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Activity, Heart, Thermometer, Scale, Waves, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Activity, Heart, Thermometer, Scale, Waves, X, Pencil } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -20,7 +21,7 @@ import {
   ReferenceLine,
   Legend,
 } from 'recharts';
-import { fetchVitals, fetchLatestVitals, createVital, deleteVital } from '@/api';
+import { fetchVitals, fetchLatestVitals, createVital, deleteVital, updateVital } from '@/api';
 import type { Vital } from '@/api';
 
 const TIME_RANGES = [
@@ -170,6 +171,48 @@ export default function VitalsPage() {
     }
   }
 
+  function loadAll() { loadVitals(range); fetchLatestVitals().then(v => setLatest(v ?? null)).catch(() => {}) }
+
+  const EMPTY = { bp_sys: '', bp_dia: '', hr: '', temp_c: '', spo2: '', weight_kg: '', notes: '' }
+  const [editing, setEditing] = useState<Vital | null>(null)
+  const [editForm, setEditForm] = useState(EMPTY)
+
+  function openEdit(v: Vital) {
+    setEditing(v)
+    setEditForm({
+      bp_sys: v.bp_sys != null ? String(v.bp_sys) : '',
+      bp_dia: v.bp_dia != null ? String(v.bp_dia) : '',
+      hr: v.hr != null ? String(v.hr) : '',
+      temp_c: v.temp_c != null ? String(v.temp_c) : '',
+      spo2: v.spo2 != null ? String(v.spo2) : '',
+      weight_kg: v.weight_kg != null ? String(v.weight_kg) : '',
+      notes: v.notes || '',
+    })
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editing) return
+    setSubmitting(true)
+    try {
+      await updateVital(editing.id, {
+        bp_sys: editForm.bp_sys ? Number(editForm.bp_sys) : null as any,
+        bp_dia: editForm.bp_dia ? Number(editForm.bp_dia) : null as any,
+        hr: editForm.hr ? Number(editForm.hr) : null as any,
+        temp_c: editForm.temp_c ? Number(editForm.temp_c) : null as any,
+        spo2: editForm.spo2 ? Number(editForm.spo2) : null as any,
+        weight_kg: editForm.weight_kg ? Number(editForm.weight_kg) : null as any,
+        notes: editForm.notes || null as any,
+      })
+      setEditing(null)
+      loadAll()
+    } catch { setError('Failed to update') } finally { setSubmitting(false) }
+  }
+
+  async function handleDeleteVital(id: number) { await deleteVital(id); loadAll() }
+
+  const sorted = vitals ? [...vitals].sort((a, b) => new Date(b.measured_at).getTime() - new Date(a.measured_at).getTime()) : []
+
   const chartData = vitals
     ? [...vitals]
         .sort((a, b) => new Date(a.measured_at).getTime() - new Date(b.measured_at).getTime())
@@ -315,17 +358,23 @@ export default function VitalsPage() {
                 <p className="text-xs text-muted-foreground">
                   {formatDateTime(latest.measured_at)}
                 </p>
-                <button
-                  onClick={async () => {
-                    if (!window.confirm('Delete this vitals reading?')) return;
-                    await deleteVital(latest.id);
-                    loadVitals(range);
-                    fetchLatestVitals().then((v) => setLatest(v ?? null)).catch(() => setLatest(null));
-                  }}
-                  className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 shrink-0"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => openEdit(latest)}
+                    className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-primary/10 text-muted-foreground hover:text-primary shrink-0"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm('Delete this vitals reading?')) return;
+                      await handleDeleteVital(latest.id);
+                    }}
+                    className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                   <div>
@@ -506,6 +555,60 @@ export default function VitalsPage() {
           ))}
         </Tabs>
       </div>
+
+      {/* History List */}
+      {vitals && vitals.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold">History</h2>
+          <div className="space-y-2">
+            {sorted.map(v => (
+              <Card key={v.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="text-xs text-muted-foreground">{formatDateTime(v.measured_at)}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button onClick={() => openEdit(v)} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-primary/10 text-muted-foreground hover:text-primary"><Pencil className="h-4 w-4" /></button>
+                      <button onClick={() => handleDeleteVital(v.id)} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><X className="h-4 w-4" /></button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-1 text-sm">
+                    <div><span className="text-muted-foreground">BP </span><span className="font-medium">{v.bp_sys != null ? `${v.bp_sys}/${v.bp_dia ?? '—'}` : 'N/A'}</span></div>
+                    <div><span className="text-muted-foreground">HR </span><span className="font-medium">{v.hr != null ? v.hr : 'N/A'}</span></div>
+                    <div><span className="text-muted-foreground">Temp </span><span className="font-medium">{v.temp_c != null ? `${v.temp_c}°C` : 'N/A'}</span></div>
+                    <div><span className="text-muted-foreground">SpO₂ </span><span className="font-medium">{v.spo2 != null ? `${v.spo2}%` : 'N/A'}</span></div>
+                    <div><span className="text-muted-foreground">Weight </span><span className="font-medium">{v.weight_kg != null ? `${v.weight_kg} kg` : 'N/A'}</span></div>
+                  </div>
+                  {v.notes && <p className="text-xs text-muted-foreground mt-1.5 italic">{v.notes}</p>}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <Dialog open={editing !== null} onOpenChange={o => { if (!o) setEditing(null) }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Vitals</DialogTitle></DialogHeader>
+          {editing && (
+            <form onSubmit={handleEdit} className="space-y-3">
+              <p className="text-xs text-muted-foreground">{formatDateTime(editing.measured_at)}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="space-y-1"><Label htmlFor="e_bp_sys">Systolic BP</Label><Input id="e_bp_sys" type="number" inputMode="numeric" value={editForm.bp_sys} onChange={e => setEditForm(f => ({ ...f, bp_sys: e.target.value }))} /></div>
+                <div className="space-y-1"><Label htmlFor="e_bp_dia">Diastolic BP</Label><Input id="e_bp_dia" type="number" inputMode="numeric" value={editForm.bp_dia} onChange={e => setEditForm(f => ({ ...f, bp_dia: e.target.value }))} /></div>
+                <div className="space-y-1"><Label htmlFor="e_hr">Heart Rate</Label><Input id="e_hr" type="number" inputMode="numeric" value={editForm.hr} onChange={e => setEditForm(f => ({ ...f, hr: e.target.value }))} /></div>
+                <div className="space-y-1"><Label htmlFor="e_temp">Temp (°C)</Label><Input id="e_temp" type="number" inputMode="decimal" step="0.1" value={editForm.temp_c} onChange={e => setEditForm(f => ({ ...f, temp_c: e.target.value }))} /></div>
+                <div className="space-y-1"><Label htmlFor="e_spo2">SpO₂ (%)</Label><Input id="e_spo2" type="number" inputMode="numeric" value={editForm.spo2} onChange={e => setEditForm(f => ({ ...f, spo2: e.target.value }))} /></div>
+                <div className="space-y-1"><Label htmlFor="e_weight">Weight (kg)</Label><Input id="e_weight" type="number" inputMode="decimal" step="0.1" value={editForm.weight_kg} onChange={e => setEditForm(f => ({ ...f, weight_kg: e.target.value }))} /></div>
+              </div>
+              <div className="space-y-1"><Label htmlFor="e_notes">Notes</Label><Input id="e_notes" value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} /></div>
+              <DialogFooter>
+                <Button type="button" variant="outline" className="min-h-[44px]" onClick={() => setEditing(null)}>Cancel</Button>
+                <Button type="submit" className="min-h-[44px]" disabled={submitting}>{submitting ? 'Saving...' : 'Save'}</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
