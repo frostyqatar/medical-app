@@ -38,6 +38,17 @@ function removeKey() {
   try { localStorage.removeItem(STORAGE_KEY) } catch {}
 }
 
+function getJwt(): string | null {
+  try {
+    const stored = localStorage.getItem('care-tracker-auth')
+    if (stored) {
+      const { token } = JSON.parse(stored)
+      return token || null
+    }
+  } catch {}
+  return null
+}
+
 function fmtTime(): string {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
@@ -119,7 +130,10 @@ export default function ChatWidget() {
     try {
       const res = await fetch('/api/chat/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(getJwt() ? { Authorization: `Bearer ${getJwt()}` } : {}),
+        },
         body: JSON.stringify({
           messages: updated.map((m) => ({ role: m.role, content: m.content })),
           page: pageNames[location.pathname] || location.pathname,

@@ -17,12 +17,16 @@ import { Droplet, TrendingUp, TrendingDown, Minus, X, Pencil } from 'lucide-reac
 import {
   LineChart,
   Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  ReferenceArea,
+  Brush,
 } from 'recharts';
 import { fetchGlucose, fetchLatestGlucose, createGlucose, deleteGlucose, updateGlucose } from '@/api';
 import type { Glucose } from '@/api';
@@ -60,14 +64,16 @@ function formatDateTime(ts: string) {
 }
 
 function glucoseColor(value: number): string {
-  if (value < 70 || value > 250) return 'text-[hsl(0,84%,60%)]';
-  if (value > 180) return 'text-[hsl(45,93%,47%)]';
-  return 'text-[hsl(142,76%,36%)]';
+  if (value < 70 || value > 250) return 'text-red-600';
+  if (value < 80) return 'text-amber-500';
+  if (value > 180) return 'text-amber-600';
+  return 'text-green-600';
 }
 
 function glucoseBg(value: number): string {
   if (value < 70 || value > 250) return 'bg-red-100 dark:bg-red-950';
-  if (value > 180) return 'bg-yellow-100 dark:bg-yellow-950';
+  if (value < 80) return 'bg-amber-50 dark:bg-amber-950';
+  if (value > 180) return 'bg-orange-50 dark:bg-orange-950';
   return 'bg-green-100 dark:bg-green-950';
 }
 
@@ -291,23 +297,37 @@ export default function GlucosePage() {
                 <>
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-sm font-medium flex items-center gap-2"><Droplet className="h-4 w-4 text-muted-foreground" />Glucose Trend</CardTitle></CardHeader>
-                    <CardContent>
+                    <CardContent className="overflow-visible">
+                      <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
                       <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                          <XAxis dataKey="date" className="text-xs" tick={{ fontSize: 12 }} />
-                          <YAxis className="text-xs" tick={{ fontSize: 12 }} width={40} />
+                        <AreaChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="dGlucoseGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} /><stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} /></linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                          <YAxis tick={{ fontSize: 12 }} width={40} />
                           <Tooltip />
-                          <ReferenceLine y={70} stroke="hsl(var(--destructive))" strokeDasharray="4 4" label={{ value: '70', position: 'left', fontSize: 10 }} />
-                          <ReferenceLine y={180} stroke="hsl(45 93% 47%)" strokeDasharray="4 4" label={{ value: '180', position: 'left', fontSize: 10 }} />
-                          <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} name="Glucose" />
-                        </LineChart>
+                          <ReferenceArea y1={250} y2={500} fill="#ef4444" fillOpacity={0.08} />
+                          <ReferenceArea y1={180} y2={250} fill="#f97316" fillOpacity={0.06} />
+                          <ReferenceArea y1={130} y2={180} fill="#eab308" fillOpacity={0.04} />
+                          <ReferenceArea y1={0} y2={70} fill="#ef4444" fillOpacity={0.08} />
+                          <ReferenceArea y1={70} y2={80} fill="#f97316" fillOpacity={0.06} />
+                          <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: 'Critical 70', position: 'left', fontSize: 9, fill: '#ef4444' }} />
+                          <ReferenceLine y={180} stroke="#f97316" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: 'High 180', position: 'left', fontSize: 9, fill: '#f97316' }} />
+                          <ReferenceLine y={250} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: 'Critical 250', position: 'left', fontSize: 9, fill: '#ef4444' }} />
+                          <Area type="monotone" dataKey="value" fill="url(#dGlucoseGrad)" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                          <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
+                        </AreaChart>
                       </ResponsiveContainer>
-                      <div className="flex gap-4 mt-3 text-xs sm:text-sm text-muted-foreground flex-wrap">
-                        <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-red-500 inline-block" />Low &lt;70</span>
-                        <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-green-500 inline-block" />Normal 70-180</span>
-                        <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-yellow-500 inline-block" />High 180-250</span>
-                        <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-red-500 inline-block" />Critical &gt;250</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-x-4 gap-y-1.5 mt-3 text-xs">
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-100 border border-red-300 shrink-0" /><span className="text-muted-foreground">&lt;70</span><span className="ml-auto font-medium text-red-600">Critical Low</span></div>
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-50 border border-amber-300 shrink-0" /><span className="text-muted-foreground">70–80</span><span className="ml-auto font-medium text-amber-600">Low</span></div>
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-green-50 border border-green-300 shrink-0" /><span className="text-muted-foreground">80–130</span><span className="ml-auto font-medium text-green-600">Normal</span></div>
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-yellow-50 border border-yellow-300 shrink-0" /><span className="text-muted-foreground">130–180</span><span className="ml-auto font-medium text-amber-500">Elevated</span></div>
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-orange-50 border border-orange-300 shrink-0" /><span className="text-muted-foreground">180–250</span><span className="ml-auto font-medium text-amber-600">High</span></div>
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-100 border border-red-300 shrink-0" /><span className="text-muted-foreground">&gt;250</span><span className="ml-auto font-medium text-red-600">Critical High</span></div>
                       </div>
                     </CardContent>
                   </Card>

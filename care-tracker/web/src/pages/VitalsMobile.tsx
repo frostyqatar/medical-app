@@ -33,7 +33,7 @@ function vitalColor(type: string, value: number | null): string {
   }
   if (type === 'hr') {
     if (value < 50 || value > 110) return 'text-red-500'
-    if (value > 100) return 'text-amber-500'
+    if (value < 60 || value > 100) return 'text-amber-500'
     return ''
   }
   if (type === 'temp_c') {
@@ -254,7 +254,6 @@ export default function VitalsMobile() {
                   <XAxis dataKey="idx" tick={{ fontSize: 10 }} tickFormatter={xtick} />
                   <YAxis tick={{ fontSize: 10 }} width={35} domain={[0, 250]} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
 
                   <ReferenceArea y1={180} y2={250} fill="#ef4444" fillOpacity={0.12} label={{ value: 'Crisis ≥180', position: 'insideTopRight', fill: '#ef4444', fontSize: 9 }} />
                   <ReferenceArea y1={140} y2={180} fill="#f97316" fillOpacity={0.10} label={{ value: 'High ≥140', position: 'insideTopRight', fill: '#f97316', fontSize: 9 }} />
@@ -265,7 +264,7 @@ export default function VitalsMobile() {
                   <ReferenceLine y={90} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
 
                   <Area type="monotone" dataKey="bp_sys" fill="url(#gradSys)" stroke="none" />
-                  <Line type="monotone" dataKey="bp_sys" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls name="Systolic" />
+                  <Line type="monotone" dataKey="bp_sys" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls />
 
                   <Brush dataKey="idx" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </LineChart>
@@ -284,7 +283,6 @@ export default function VitalsMobile() {
                   <XAxis dataKey="idx" tick={{ fontSize: 10 }} tickFormatter={xtick} />
                   <YAxis tick={{ fontSize: 10 }} width={35} domain={[0, 160]} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
 
                   <ReferenceArea y1={110} y2={160} fill="#ef4444" fillOpacity={0.12} label={{ value: 'Crisis ≥110', position: 'insideTopRight', fill: '#ef4444', fontSize: 9 }} />
                   <ReferenceArea y1={90} y2={110} fill="#f97316" fillOpacity={0.10} label={{ value: 'High ≥90', position: 'insideTopRight', fill: '#f97316', fontSize: 9 }} />
@@ -295,7 +293,7 @@ export default function VitalsMobile() {
                   <ReferenceLine y={60} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
 
                   <Area type="monotone" dataKey="bp_dia" fill="url(#gradDia)" stroke="none" />
-                  <Line type="monotone" dataKey="bp_dia" stroke="#a855f7" strokeWidth={2.5} dot={{ r: 4, fill: '#a855f7', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls name="Diastolic" />
+                  <Line type="monotone" dataKey="bp_dia" stroke="#a855f7" strokeWidth={2.5} dot={{ r: 4, fill: '#a855f7', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls />
 
                   <Brush dataKey="idx" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </LineChart>
@@ -315,9 +313,10 @@ export default function VitalsMobile() {
                   <YAxis tick={{ fontSize: 10 }} width={35} />
                   <Tooltip content={<CustomTooltip />} />
                   <ReferenceArea y1={110} y2={200} fill="#ef4444" fillOpacity={0.06} />
-                  <ReferenceArea y1={0} y2={50} fill="#ef4444" fillOpacity={0.06} />
                   <ReferenceArea y1={100} y2={110} fill="#f97316" fillOpacity={0.06} />
-                  <ReferenceLine y={100} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
+                  <ReferenceArea y1={0} y2={50} fill="#ef4444" fillOpacity={0.06} />
+                  <ReferenceArea y1={50} y2={60} fill="#f97316" fillOpacity={0.06} />
+                  <ReferenceLine y={60} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                   <ReferenceLine y={50} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
                   <Area type="monotone" dataKey="hr" fill="url(#gradHr)" stroke="#ef4444" strokeWidth={2} dot={false} connectNulls name="HR" />
                   <Brush dataKey="idx" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />

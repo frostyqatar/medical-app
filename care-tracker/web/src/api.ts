@@ -544,14 +544,20 @@ export async function fetchAlerts(): Promise<AlertResponse> {
   const latestVital = (vitalsData as Vital[])?.[0]
   if (latestVital) {
     const date = new Date(latestVital.measured_at).toLocaleDateString()
-    if (latestVital.bp_sys !== null && (latestVital.bp_sys > 160 || latestVital.bp_sys < 90)) {
+    if (latestVital.bp_sys !== null && (latestVital.bp_sys >= 140 || latestVital.bp_sys < 90)) {
       alerts.push(`Blood pressure: ${latestVital.bp_sys}/${latestVital.bp_dia ?? '?'} mmHg on ${date}`)
     }
-    if (latestVital.hr !== null && latestVital.hr > 100) {
-      alerts.push(`High heart rate: ${latestVital.hr} bpm on ${date}`)
+    if (latestVital.bp_dia !== null && latestVital.bp_dia >= 110) {
+      alerts.push(`High diastolic BP: ${latestVital.bp_dia} mmHg on ${date}`)
+    }
+    if (latestVital.hr !== null && (latestVital.hr > 100 || latestVital.hr < 50)) {
+      alerts.push(`${latestVital.hr > 100 ? 'High' : 'Low'} heart rate: ${latestVital.hr} bpm on ${date}`)
     }
     if (latestVital.spo2 !== null && latestVital.spo2 < 92) {
       alerts.push(`Low SpO2: ${latestVital.spo2}% on ${date}`)
+    }
+    if (latestVital.temp_c !== null && latestVital.temp_c >= 38) {
+      alerts.push(`Fever: ${latestVital.temp_c}°C on ${date}`)
     }
   }
 
