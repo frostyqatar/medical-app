@@ -6,13 +6,19 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Activity, Heart, Thermometer, Waves, Scale } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Activity, Heart, Thermometer, Waves, Scale, X, Pencil } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { fetchVitals, fetchLatestVitals, createVital } from '@/api'
+import { fetchVitals, fetchLatestVitals, createVital, deleteVital, updateVital } from '@/api'
 import type { Vital } from '@/api'
 
 function formatDate(ts: string) { return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) }
 function formatDateTime(ts: string) { return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }
+function toDatetimeLocal(ts: string): string {
+  const d = new Date(ts)
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
 function vitalColor(type: string, value: number | null): string {
   if (value == null) return ''
   if (type === 'bp_sys') {
@@ -43,13 +49,17 @@ function vitalColor(type: string, value: number | null): string {
   return ''
 }
 
+const EMPTY_FORM = { bp_sys: '', bp_dia: '', hr: '', temp_c: '', spo2: '', weight_kg: '', notes: '' }
+
 export default function VitalsMobile() {
   const [vitals, setVitals] = useState<Vital[] | null>(null)
   const [latest, setLatest] = useState<Vital | null | undefined>(undefined)
   const [range, setRange] = useState(7)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [form, setForm] = useState({ bp_sys: '', bp_dia: '', hr: '', temp_c: '', spo2: '', weight_kg: '', notes: '' })
+  const [form, setForm] = useState(EMPTY_FORM)
+  const [editing, setEditing] = useState<Vital | null>(null)
+  const [editForm, setEditForm] = useState(EMPTY_FORM)
 
   const load = useCallback(async (days: number) => {
     setVitals(null)
@@ -58,6 +68,8 @@ export default function VitalsMobile() {
 
   useEffect(() => { load(range) }, [range, load])
   useEffect(() => { fetchLatestVitals().then(v => setLatest(v ?? null)).catch(() => {}) }, [])
+
+  function loadAll() { load(range); fetchLatestVitals().then(v => setLatest(v ?? null)).catch(() => {}) }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -73,12 +85,46 @@ export default function VitalsMobile() {
         weight_kg: form.weight_kg ? Number(form.weight_kg) : undefined,
         notes: form.notes || undefined,
       })
-      setForm({ bp_sys: '', bp_dia: '', hr: '', temp_c: '', spo2: '', weight_kg: '', notes: '' })
-      load(range)
-      fetchLatestVitals().then(v => setLatest(v ?? null)).catch(() => {})
+      setForm(EMPTY_FORM)
+      loadAll()
     } catch { setError('Failed to record') } finally { setSubmitting(false) }
   }
 
+  function openEdit(v: Vital) {
+    setEditing(v)
+    setEditForm({
+      bp_sys: v.bp_sys != null ? String(v.bp_sys) : '',
+      bp_dia: v.bp_dia != null ? String(v.bp_dia) : '',
+      hr: v.hr != null ? String(v.hr) : '',
+      temp_c: v.temp_c != null ? String(v.temp_c) : '',
+      spo2: v.spo2 != null ? String(v.spo2) : '',
+      weight_kg: v.weight_kg != null ? String(v.weight_kg) : '',
+      notes: v.notes || '',
+    })
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editing) return
+    setSubmitting(true)
+    try {
+      await updateVital(editing.id, {
+        bp_sys: editForm.bp_sys ? Number(editForm.bp_sys) : null as any,
+        bp_dia: editForm.bp_dia ? Number(editForm.bp_dia) : null as any,
+        hr: editForm.hr ? Number(editForm.hr) : null as any,
+        temp_c: editForm.temp_c ? Number(editForm.temp_c) : null as any,
+        spo2: editForm.spo2 ? Number(editForm.spo2) : null as any,
+        weight_kg: editForm.weight_kg ? Number(editForm.weight_kg) : null as any,
+        notes: editForm.notes || null as any,
+      })
+      setEditing(null)
+      loadAll()
+    } catch { setError('Failed to update') } finally { setSubmitting(false) }
+  }
+
+  async function handleDelete(id: number) { await deleteVital(id); loadAll() }
+
+  const sorted = vitals ? [...vitals].sort((a, b) => new Date(b.measured_at).getTime() - new Date(a.measured_at).getTime()) : []
   const chartData = vitals ? [...vitals].sort((a, b) => new Date(a.measured_at).getTime() - new Date(b.measured_at).getTime()).map(v => ({
     date: formatDate(v.measured_at), bp_sys: v.bp_sys, bp_dia: v.bp_dia, hr: v.hr, temp_c: v.temp_c, spo2: v.spo2, weight_kg: v.weight_kg,
   })) : []
@@ -106,6 +152,10 @@ export default function VitalsMobile() {
               <div className="space-y-1"><Label className="text-xs">Temp (&deg;C)</Label><Input type="number" inputMode="decimal" step="0.1" placeholder="36.6" value={form.temp_c} onChange={e => setForm(f => ({ ...f, temp_c: e.target.value }))} /></div>
               <div className="space-y-1"><Label className="text-xs">SpO&sup2; (%)</Label><Input type="number" inputMode="numeric" placeholder="98" value={form.spo2} onChange={e => setForm(f => ({ ...f, spo2: e.target.value }))} /></div>
               <div className="space-y-1"><Label className="text-xs">Weight (kg)</Label><Input type="number" inputMode="decimal" step="0.1" placeholder="70" value={form.weight_kg} onChange={e => setForm(f => ({ ...f, weight_kg: e.target.value }))} /></div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Notes</Label>
+              <Input placeholder="Any notes..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
             </div>
             <Button type="submit" disabled={submitting} className="w-full min-h-[44px]">{submitting ? 'Recording...' : 'Record Vitals'}</Button>
             {error && <p className="text-sm text-destructive">{error}</p>}
@@ -185,8 +235,61 @@ export default function VitalsMobile() {
               </ResponsiveContainer>
             </CardContent></Card>
           )}
+
+          {/* Scrollable history list */}
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 mt-2">History</h3>
+          <div className="space-y-2">
+            {sorted.map(v => (
+              <Card key={v.id} className="rounded-xl">
+                <CardContent className="p-3">
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <span className="text-[11px] text-muted-foreground">{formatDateTime(v.measured_at)}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button onClick={() => openEdit(v)} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-primary"><Pencil className="h-4 w-4" /></button>
+                      <button onClick={() => handleDelete(v.id)} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-red-500"><X className="h-4 w-4" /></button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-xs">
+                    <div><span className="text-muted-foreground">BP </span><span className={`font-medium ${vitalColor('bp_sys', v.bp_sys)}`}>{v.bp_sys != null ? `${v.bp_sys}/${v.bp_dia ?? '—'}` : 'N/A'}</span></div>
+                    <div><span className="text-muted-foreground">HR </span><span className={`font-medium ${vitalColor('hr', v.hr)}`}>{v.hr != null ? v.hr : 'N/A'}</span></div>
+                    <div><span className="text-muted-foreground">Temp </span><span className={`font-medium ${vitalColor('temp_c', v.temp_c)}`}>{v.temp_c != null ? `${v.temp_c}°` : 'N/A'}</span></div>
+                    <div><span className="text-muted-foreground">SpO₂ </span><span className={`font-medium ${vitalColor('spo2', v.spo2)}`}>{v.spo2 != null ? `${v.spo2}%` : 'N/A'}</span></div>
+                    <div><span className="text-muted-foreground">Wt </span><span className="font-medium">{v.weight_kg != null ? `${v.weight_kg}kg` : 'N/A'}</span></div>
+                  </div>
+                  {v.notes && <p className="text-[11px] text-muted-foreground mt-1.5 italic line-clamp-1">{v.notes}</p>}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
+
+      <Dialog open={editing !== null} onOpenChange={o => { if (!o) setEditing(null) }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Vitals</DialogTitle></DialogHeader>
+          {editing && (
+            <form onSubmit={handleEdit} className="space-y-3">
+              <p className="text-xs text-muted-foreground">{formatDateTime(editing.measured_at)}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1"><Label className="text-xs">Systolic BP</Label><Input type="number" inputMode="numeric" value={editForm.bp_sys} onChange={e => setEditForm(f => ({ ...f, bp_sys: e.target.value }))} /></div>
+                <div className="space-y-1"><Label className="text-xs">Diastolic BP</Label><Input type="number" inputMode="numeric" value={editForm.bp_dia} onChange={e => setEditForm(f => ({ ...f, bp_dia: e.target.value }))} /></div>
+                <div className="space-y-1"><Label className="text-xs">Heart Rate</Label><Input type="number" inputMode="numeric" value={editForm.hr} onChange={e => setEditForm(f => ({ ...f, hr: e.target.value }))} /></div>
+                <div className="space-y-1"><Label className="text-xs">Temp (&deg;C)</Label><Input type="number" inputMode="decimal" step="0.1" value={editForm.temp_c} onChange={e => setEditForm(f => ({ ...f, temp_c: e.target.value }))} /></div>
+                <div className="space-y-1"><Label className="text-xs">SpO&sup2; (%)</Label><Input type="number" inputMode="numeric" value={editForm.spo2} onChange={e => setEditForm(f => ({ ...f, spo2: e.target.value }))} /></div>
+                <div className="space-y-1"><Label className="text-xs">Weight (kg)</Label><Input type="number" inputMode="decimal" step="0.1" value={editForm.weight_kg} onChange={e => setEditForm(f => ({ ...f, weight_kg: e.target.value }))} /></div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Notes</Label>
+                <Input value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" className="min-h-[44px]" onClick={() => setEditing(null)}>Cancel</Button>
+                <Button type="submit" className="min-h-[44px]" disabled={submitting}>{submitting ? 'Saving...' : 'Save'}</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

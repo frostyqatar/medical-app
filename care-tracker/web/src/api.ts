@@ -246,6 +246,12 @@ export async function deleteVital(id: number): Promise<{ deleted: number }> {
   return { deleted: id }
 }
 
+export async function updateVital(id: number, payload: Partial<Vital>): Promise<Vital> {
+  const { data, error } = await supabase.from('vitals').update(payload).eq('id', id).select().single()
+  if (error) handleError(error)
+  return data as Vital
+}
+
 // ── Glucose ────────────────────────────────────────────────────────────────────
 
 export async function fetchGlucose(days?: number): Promise<Glucose[]> {
