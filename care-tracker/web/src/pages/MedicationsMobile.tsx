@@ -17,19 +17,48 @@ const CATEGORIES: Record<string, string> = {
   'BP': 'Blood Pressure', 'heart/BP': 'Blood Pressure', 'antiplatelet': 'Cardiovascular',
   'cholesterol': 'Cholesterol', 'diabetes/weight': 'Diabetes', 'diabetes': 'Diabetes',
   'nerve/phantom pain': 'Neuropathy & Pain', 'nerve pain': 'Neuropathy & Pain',
-  'neuropathy': 'Neuropathy & Pain', 'pain/fever': 'Pain', 'pain': 'Pain',
-  'stomach': 'GI & Stomach', 'constipation': 'GI & Stomach',
-  'fungal skin': 'Skin', 'itch/rash': 'Skin', 'antihistamine': 'Allergy',
-  'deficiency': 'Vitamins & Supplements', 'joint': 'Vitamins & Supplements', 'wound': 'Wound Care',
+  'nerve pain/mood': 'Neuropathy & Pain', 'neuropathy': 'Neuropathy & Pain',
+  'pain/fever': 'Pain', 'pain': 'Pain', 'joint pain': 'Pain',
+  'stomach': 'GI & Stomach', 'constipation': 'GI & Stomach', 'hemorrhoids': 'GI & Stomach',
+  'gut motility': 'GI & Stomach',
+  'fungal skin': 'Skin', 'itch/rash': 'Skin', 'antifungal': 'Skin',
+  'antihistamine': 'Allergy', 'deficiency': 'Vitamins & Supplements',
+  'joint': 'Vitamins & Supplements', 'wound': 'Wound Care',
+  'skincare': 'Skin Care', 'hair loss': 'Hair Loss',
 }
-const CATEGORY_ORDER = ['Blood Pressure', 'Cardiovascular', 'Cholesterol', 'Diabetes', 'Neuropathy & Pain', 'Pain', 'GI & Stomach', 'Skin', 'Allergy', 'Vitamins & Supplements', 'Wound Care', 'Other']
-function categorize(p: string | null) { return CATEGORIES[p || ''] || 'Other' }
+const CATEGORY_ORDER = ['Blood Pressure', 'Cardiovascular', 'Cholesterol', 'Diabetes', 'Neuropathy & Pain', 'Pain', 'GI & Stomach', 'Skin', 'Skin Care', 'Allergy', 'Vitamins & Supplements', 'Wound Care', 'Hair Loss', 'Other']
+function categorize(p: string | null): string {
+  if (!p) return 'Other'
+  if (CATEGORIES[p]) return CATEGORIES[p]
+  return p.replace(/\b\w/g, (c) => c.toUpperCase())
+}
+function computeCategoryOrder(meds: Medication[] | null): string[] {
+  if (!meds) return CATEGORY_ORDER
+  const usedKnown = new Set(meds.map((m) => categorize(m.purpose)).filter((c) => CATEGORY_ORDER.includes(c)))
+  const dynamic = [...new Set(meds.map((m) => categorize(m.purpose)).filter((c) => !CATEGORY_ORDER.includes(c)))].sort()
+  return [...CATEGORY_ORDER.filter((c) => usedKnown.has(c)), ...dynamic]
+}
+const TIME_BUCKET_ORDER = ['Morning', 'After Dinner', 'Bedtime', 'Evening', 'Twice Daily', 'Around the Clock', 'Weekly', 'PRN / As Needed', 'Other']
+function parseScheduleTime(schedule: string | null): string {
+  if (!schedule) return 'Other'
+  const lower = schedule.toLowerCase()
+  if (lower.includes('after breakfast') || lower.includes('before breakfast')) return 'Morning'
+  if (lower.includes('after dinner')) return 'After Dinner'
+  if (lower.includes('bedtime')) return 'Bedtime'
+  if (lower.includes('evening')) return 'Evening'
+  if (lower.includes('2x/day') || lower.includes('twice daily') || lower.includes('with meals')) return 'Twice Daily'
+  if (/q[4-8]h/.test(lower)) return 'Around the Clock'
+  if (lower.includes('weekly')) return 'Weekly'
+  if (lower.includes('prn') || lower.includes('as needed')) return 'PRN / As Needed'
+  return 'Other'
+}
 
 const CATEGORY_ICONS: Record<string, string> = {
   'Blood Pressure': '♥', 'Cardiovascular': '🫀', 'Cholesterol': '🩸',
   'Diabetes': '💉', 'Neuropathy & Pain': '⚡', 'Pain': '💊',
-  'GI & Stomach': '🫃', 'Skin': '🧴', 'Allergy': '🤧',
-  'Vitamins & Supplements': '💪', 'Wound Care': '🩹', 'Other': '📋',
+  'GI & Stomach': '🫃', 'Skin': '🧴', 'Skin Care': '🧴',
+  'Allergy': '🤧',
+  'Vitamins & Supplements': '💪', 'Wound Care': '🩹', 'Hair Loss': '💇', 'Other': '📋',
 }
 
 const SCHEDULE_CHIPS = [
@@ -77,13 +106,14 @@ export default function MedicationsMobile() {
 
   const activeByCat: Record<string, Medication[]> = {}
   const inactiveMeds: Medication[] = []
-  for (const cat of CATEGORY_ORDER) {
+  const allCats = computeCategoryOrder(meds)
+  for (const cat of allCats) {
     const group = grouped[cat] || []
     activeByCat[cat] = group.filter(m => m.active === 1)
     group.filter(m => m.active === 0).forEach(m => inactiveMeds.push(m))
   }
 
-  const displayOrder = CATEGORY_ORDER.filter(cat => {
+  const displayOrder = allCats.filter(cat => {
     const active = activeByCat[cat]
     return active && active.length > 0
   })
@@ -118,6 +148,41 @@ export default function MedicationsMobile() {
                 )
               })}
             </div>
+          )}
+
+          {totalActive > 0 && (
+            <Card className="rounded-xl">
+              <CardContent className="p-3 space-y-2">
+                <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Schedule Breakdown</h4>
+                <div className="space-y-1">
+                  {(() => {
+                    const scheduleCounts: Record<string, number> = {}
+                    for (const m of (meds || []).filter((x) => x.active === 1)) {
+                      const bucket = parseScheduleTime(m.schedule)
+                      scheduleCounts[bucket] = (scheduleCounts[bucket] ?? 0) + 1
+                    }
+                    const maxCount = Math.max(...Object.values(scheduleCounts), 1)
+                    return TIME_BUCKET_ORDER.map((bucket) => {
+                      const count = scheduleCounts[bucket] ?? 0
+                      if (count === 0) return null
+                      return (
+                        <div key={bucket} className="flex items-center gap-2">
+                          <span className="text-[11px] w-24 shrink-0 text-muted-foreground">{bucket}</span>
+                          <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-primary/60 rounded-full" style={{ width: `${Math.round((count / maxCount) * 100)}%` }} />
+                          </div>
+                          <span className="text-xs font-bold tabular-nums">{count}</span>
+                        </div>
+                      )
+                    })
+                  })()}
+                </div>
+                <div className="flex gap-2 text-[10px] text-muted-foreground pt-1">
+                  <span className="font-medium">{(meds || []).filter(m => m.active === 1).length} active</span>
+                  <span>{(meds || []).filter(m => m.active === 0).length} inactive</span>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {displayOrder.map(cat => {

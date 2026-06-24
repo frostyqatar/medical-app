@@ -46,16 +46,20 @@ const CATEGORIES: Record<string, string> = {
   'BP': 'Blood Pressure', 'heart/BP': 'Blood Pressure', 'antiplatelet': 'Cardiovascular',
   'cholesterol': 'Cholesterol', 'diabetes/weight': 'Diabetes', 'diabetes': 'Diabetes',
   'nerve/phantom pain': 'Neuropathy & Pain', 'nerve pain': 'Neuropathy & Pain',
-  'neuropathy': 'Neuropathy & Pain', 'pain/fever': 'Pain', 'pain': 'Pain',
-  'stomach': 'GI & Stomach', 'constipation': 'GI & Stomach', 'fungal skin': 'Skin',
-  'itch/rash': 'Skin', 'antihistamine': 'Allergy', 'deficiency': 'Vitamins & Supplements',
+  'nerve pain/mood': 'Neuropathy & Pain', 'neuropathy': 'Neuropathy & Pain',
+  'pain/fever': 'Pain', 'pain': 'Pain', 'joint pain': 'Pain',
+  'stomach': 'GI & Stomach', 'constipation': 'GI & Stomach', 'hemorrhoids': 'GI & Stomach',
+  'gut motility': 'GI & Stomach',
+  'fungal skin': 'Skin', 'itch/rash': 'Skin', 'antifungal': 'Skin',
+  'antihistamine': 'Allergy', 'deficiency': 'Vitamins & Supplements',
   'joint': 'Vitamins & Supplements', 'wound': 'Wound Care',
+  'skincare': 'Skin Care', 'hair loss': 'Hair Loss',
 };
 
 const CATEGORY_ORDER = [
   'Blood Pressure', 'Cardiovascular', 'Cholesterol', 'Diabetes',
-  'Neuropathy & Pain', 'Pain', 'GI & Stomach', 'Skin', 'Allergy',
-  'Vitamins & Supplements', 'Wound Care', 'Other',
+  'Neuropathy & Pain', 'Pain', 'GI & Stomach', 'Skin', 'Skin Care',
+  'Allergy', 'Vitamins & Supplements', 'Wound Care', 'Hair Loss', 'Other',
 ];
 
 const CATEGORY_PURPOSE = Object.fromEntries(
@@ -66,7 +70,38 @@ const CATEGORY_PURPOSE = Object.fromEntries(
 
 function categorize(purpose: string | null): string {
   if (!purpose) return 'Other';
-  return CATEGORIES[purpose] || 'Other';
+  if (CATEGORIES[purpose]) return CATEGORIES[purpose];
+  return purpose.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function computeCategoryOrder(medications: Medication[] | null): string[] {
+  if (!medications) return CATEGORY_ORDER;
+  const usedKnown = new Set(
+    medications.map((m) => categorize(m.purpose)).filter((c) => CATEGORY_ORDER.includes(c))
+  );
+  const dynamic = [...new Set(
+    medications.map((m) => categorize(m.purpose)).filter((c) => !CATEGORY_ORDER.includes(c))
+  )].sort();
+  return [...CATEGORY_ORDER.filter((c) => usedKnown.has(c)), ...dynamic];
+}
+
+const TIME_BUCKET_ORDER = [
+  'Morning', 'After Dinner', 'Bedtime', 'Evening',
+  'Twice Daily', 'Around the Clock', 'Weekly', 'PRN / As Needed', 'Other',
+];
+
+function parseScheduleTime(schedule: string | null): string {
+  if (!schedule) return 'Other';
+  const lower = schedule.toLowerCase();
+  if (lower.includes('after breakfast') || lower.includes('before breakfast')) return 'Morning';
+  if (lower.includes('after dinner')) return 'After Dinner';
+  if (lower.includes('bedtime')) return 'Bedtime';
+  if (lower.includes('evening')) return 'Evening';
+  if (lower.includes('2x/day') || lower.includes('twice daily') || lower.includes('with meals')) return 'Twice Daily';
+  if (/q[4-8]h/.test(lower)) return 'Around the Clock';
+  if (lower.includes('weekly')) return 'Weekly';
+  if (lower.includes('prn') || lower.includes('as needed')) return 'PRN / As Needed';
+  return 'Other';
 }
 
 const ROUTES = ['oral', 'SC', 'IV', 'topical', 'IM'];
@@ -208,6 +243,69 @@ export default function Medications() {
         </CardContent>
       </Card>
 
+      {/* Analytics */}
+      <Card>
+        <CardHeader className="pb-3"><div className="flex items-center gap-2"><Pill className="h-5 w-5 text-muted-foreground" /><CardTitle className="text-base">Analytics</CardTitle></div></CardHeader>
+        <CardContent>
+          {medications === null ? (
+            <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}</div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">By Category</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {computeCategoryOrder(medications).map((cat) => {
+                    const count = grouped[cat]?.length ?? 0;
+                    if (count === 0) return null;
+                    const activeCount = grouped[cat]?.filter((m) => m.active === 1).length ?? 0;
+                    return (
+                      <div key={cat} className="flex items-center gap-2 bg-muted/40 rounded-lg px-3 py-2">
+                        <span className="text-lg font-bold tabular-nums">{count}</span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium truncate">{cat}</p>
+                          <p className="text-[10px] text-muted-foreground">{activeCount} active</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">By Schedule</h4>
+                <div className="space-y-1.5">
+                  {(() => {
+                    const scheduleCounts: Record<string, number> = {};
+                    for (const m of medications.filter((x) => x.active === 1)) {
+                      const bucket = parseScheduleTime(m.schedule);
+                      scheduleCounts[bucket] = (scheduleCounts[bucket] ?? 0) + 1;
+                    }
+                    const maxCount = Math.max(...Object.values(scheduleCounts), 1);
+                    return TIME_BUCKET_ORDER.map((bucket) => {
+                      const count = scheduleCounts[bucket] ?? 0;
+                      if (count === 0) return null;
+                      return (
+                        <div key={bucket} className="flex items-center gap-2">
+                          <span className="text-xs w-28 shrink-0 truncate text-muted-foreground">{bucket}</span>
+                          <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-primary/60 rounded-full transition-all" style={{ width: `${Math.round((count / maxCount) * 100)}%` }} />
+                          </div>
+                          <span className="text-xs font-bold tabular-nums w-5 text-right">{count}</span>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+              <div className="flex gap-3 text-xs text-muted-foreground pt-1">
+                <span className="font-medium">{medications.filter((m) => m.active === 1).length} active</span>
+                <span>{medications.filter((m) => m.active === 0).length} inactive</span>
+                <span>{medications.length} total</span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Schedule */}
       <Card>
         <CardHeader className="pb-3">
@@ -224,7 +322,7 @@ export default function Medications() {
           {medications === null ? <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
           : medications.length === 0 ? <p className="text-sm text-muted-foreground py-4 text-center">No medications found.</p>
           : <div className="space-y-8">
-              {CATEGORY_ORDER.map((category) => {
+              {computeCategoryOrder(medications).map((category) => {
                 const medsInCat = grouped[category];
                 if (!medsInCat || medsInCat.length === 0) return null;
                 return (

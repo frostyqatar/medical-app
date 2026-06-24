@@ -19,7 +19,20 @@ function contextLabel(t: string | null) {
 }
 function formatDate(ts: string) { return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) }
 function formatDateTime(ts: string) { return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }
-function glucoseColor(v: number) { if (v < 70 || v > 250) return 'text-red-600'; if (v > 180) return 'text-amber-600'; return 'text-green-600' }
+function glucoseColor(v: number) {
+  if (v < 70 || v > 250) return 'text-red-600'
+  if (v < 80) return 'text-amber-500'
+  if (v > 180) return 'text-amber-600'
+  return 'text-green-600'
+}
+function glucoseZoneLabel(v: number): string {
+  if (v < 70) return 'Critical Low'
+  if (v < 80) return 'Low'
+  if (v <= 130) return 'Normal'
+  if (v <= 180) return 'Elevated'
+  if (v <= 250) return 'High'
+  return 'Critical High'
+}
 
 export default function GlucoseMobile() {
   const [data, setData] = useState<Glucose[] | null>(null)
@@ -116,10 +129,10 @@ export default function GlucoseMobile() {
         <p className="text-sm text-muted-foreground text-center py-6">No readings yet.</p>
       ) : (
         <>
-          <Card className="rounded-xl"><CardContent className="p-3">
+          <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
             <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
             <ResponsiveContainer width="100%" height={250}>
-              <AreaChart data={chartData} margin={{ top: 5, right: 15, left: -10, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 5, right: 30, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="glucoseGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} /><stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} /></linearGradient>
                 </defs>
@@ -127,15 +140,30 @@ export default function GlucoseMobile() {
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} width={35} />
                 <Tooltip />
-                <ReferenceArea y1={250} y2={500} fill="#ef4444" fillOpacity={0.06} />
+                <ReferenceArea y1={250} y2={500} fill="#ef4444" fillOpacity={0.08} />
                 <ReferenceArea y1={180} y2={250} fill="#f97316" fillOpacity={0.06} />
-                <ReferenceArea y1={0} y2={70} fill="#ef4444" fillOpacity={0.06} />
-                <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: 'Low 70', position: 'left', fontSize: 10, fill: '#ef4444' }} />
-                <ReferenceLine y={180} stroke="#f97316" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: 'High 180', position: 'left', fontSize: 10, fill: '#f97316' }} />
+                <ReferenceArea y1={130} y2={180} fill="#eab308" fillOpacity={0.04} />
+                <ReferenceArea y1={0} y2={70} fill="#ef4444" fillOpacity={0.08} />
+                <ReferenceArea y1={70} y2={80} fill="#f97316" fillOpacity={0.06} />
+                <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: 'Critical 70', position: 'left', fontSize: 9, fill: '#ef4444' }} />
+                <ReferenceLine y={180} stroke="#f97316" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: 'High 180', position: 'left', fontSize: 9, fill: '#f97316' }} />
+                <ReferenceLine y={250} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: 'Critical 250', position: 'left', fontSize: 9, fill: '#ef4444' }} />
                 <Area type="monotone" dataKey="value" fill="url(#glucoseGrad)" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
                 <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
               </AreaChart>
             </ResponsiveContainer>
+            </div>
+          </CardContent></Card>
+
+          <Card className="rounded-xl"><CardContent className="p-3">
+            <p className="text-xs font-medium text-muted-foreground mb-2">Glucose Ranges (mg/dL)</p>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
+              <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-100 border border-red-300 shrink-0" /><span className="text-muted-foreground">&lt;70</span><span className="ml-auto font-medium text-red-600">Critical Low</span></div>
+              <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-50 border border-amber-300 shrink-0" /><span className="text-muted-foreground">70–80</span><span className="ml-auto font-medium text-amber-600">Low</span></div>
+              <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-green-50 border border-green-300 shrink-0" /><span className="text-muted-foreground">80–130</span><span className="ml-auto font-medium text-green-600">Normal</span></div>
+              <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-yellow-50 border border-yellow-300 shrink-0" /><span className="text-muted-foreground">130–180</span><span className="ml-auto font-medium text-amber-500">Elevated</span></div>
+              <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-orange-50 border border-orange-300 shrink-0" /><span className="text-muted-foreground">180–250</span><span className="ml-auto font-medium text-amber-600">High</span></div>
+              <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-100 border border-red-300 shrink-0" /><span className="text-muted-foreground">&gt;250</span><span className="ml-auto font-medium text-red-600">Critical High</span></div>
             </div>
           </CardContent></Card>
 

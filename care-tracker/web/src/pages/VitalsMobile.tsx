@@ -125,11 +125,21 @@ export default function VitalsMobile() {
   async function handleDelete(id: number) { await deleteVital(id); loadAll() }
 
   const sorted = vitals ? [...vitals].sort((a, b) => new Date(b.measured_at).getTime() - new Date(a.measured_at).getTime()) : []
-  const chartData = vitals ? [...vitals].sort((a, b) => new Date(a.measured_at).getTime() - new Date(b.measured_at).getTime()).map(v => ({
-    date: formatDate(v.measured_at), bp_sys: v.bp_sys, bp_dia: v.bp_dia, hr: v.hr, temp_c: v.temp_c, spo2: v.spo2, weight_kg: v.weight_kg,
+  const chartData = vitals ? [...vitals].sort((a, b) => new Date(a.measured_at).getTime() - new Date(b.measured_at).getTime()).map((v, i) => ({
+    idx: i, label: formatDate(v.measured_at), fullLabel: formatDateTime(v.measured_at),
+    measured_at: v.measured_at, bp_sys: v.bp_sys, bp_dia: v.bp_dia, hr: v.hr, temp_c: v.temp_c, spo2: v.spo2, weight_kg: v.weight_kg,
   })) : []
 
+  const xtick = (i: number) => {
+    const item = chartData[i]
+    if (!item) return ''
+    if (i > 0 && chartData[i - 1]?.label === item.label) return ''
+    return item.label
+  }
+
   const hasBp = vitals?.some(v => v.bp_sys != null || v.bp_dia != null)
+  const hasBpSys = vitals?.some(v => v.bp_sys != null)
+  const hasBpDia = vitals?.some(v => v.bp_dia != null)
   const hasHr = vitals?.some(v => v.hr != null)
   const hasTemp = vitals?.some(v => v.temp_c != null)
   const hasSpo2 = vitals?.some(v => v.spo2 != null)
@@ -138,11 +148,12 @@ export default function VitalsMobile() {
   const CHART_H = 200
   const [chartsOpen, setChartsOpen] = useState(true)
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null
+    const displayLabel = payload[0]?.payload?.fullLabel ?? ''
     return (
       <div className="bg-background border rounded-lg shadow-lg p-2.5 text-xs space-y-1">
-        <p className="font-medium text-muted-foreground">{label}</p>
+        <p className="font-medium text-muted-foreground">{displayLabel}</p>
         {payload.map((p: any) => (
           <div key={p.dataKey} className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
@@ -232,27 +243,61 @@ export default function VitalsMobile() {
 
           {chartsOpen && (
             <>
-          {hasBp && (
+          {hasBpSys && (
             <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
-              <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Activity className="h-3.5 w-3.5" />Blood Pressure (mmHg)</p>
+              <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Activity className="h-3.5 w-3.5" />Systolic BP (mmHg)</p>
               <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
-                <LineChart data={chartData} {...sharedChartProps}>
+                <LineChart data={chartData.filter(d => d.bp_sys != null)} margin={{ top: 12, right: 30, left: 0, bottom: 0 }}>
                   {gradientDefs}
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                  <YAxis yAxisId="left" tick={{ fontSize: 10 }} width={35} domain={[0, 250]} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} width={35} domain={[0, 160]} />
+                  <XAxis dataKey="idx" tick={{ fontSize: 10 }} tickFormatter={xtick} />
+                  <YAxis tick={{ fontSize: 10 }} width={35} domain={[0, 250]} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
-                  <ReferenceArea y1={180} y2={250} yAxisId="left" fill="#ef4444" fillOpacity={0.06} />
-                  <ReferenceArea y1={140} y2={180} yAxisId="left" fill="#f97316" fillOpacity={0.06} />
-                  <ReferenceArea y1={0} y2={90} yAxisId="left" fill="#ef4444" fillOpacity={0.06} />
-                  <ReferenceLine y={140} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} yAxisId="left" />
-                  <ReferenceLine y={90} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} yAxisId="left" />
-                  <Area type="monotone" dataKey="bp_sys" fill="url(#gradSys)" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} connectNulls name="Systolic" yAxisId="left" />
-                  <Area type="monotone" dataKey="bp_dia" fill="url(#gradDia)" stroke="#a855f7" strokeWidth={2} dot={false} connectNulls name="Diastolic" yAxisId="right" />
-                  <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
+
+                  <ReferenceArea y1={180} y2={250} fill="#ef4444" fillOpacity={0.12} label={{ value: 'Crisis ≥180', position: 'insideTopRight', fill: '#ef4444', fontSize: 9 }} />
+                  <ReferenceArea y1={140} y2={180} fill="#f97316" fillOpacity={0.10} label={{ value: 'High ≥140', position: 'insideTopRight', fill: '#f97316', fontSize: 9 }} />
+                  <ReferenceArea y1={0} y2={90} fill="#ef4444" fillOpacity={0.10} label={{ value: 'Low <90', position: 'insideBottomRight', fill: '#ef4444', fontSize: 9 }} />
+
+                  <ReferenceLine y={180} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
+                  <ReferenceLine y={140} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
+                  <ReferenceLine y={90} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
+
+                  <Area type="monotone" dataKey="bp_sys" fill="url(#gradSys)" stroke="none" />
+                  <Line type="monotone" dataKey="bp_sys" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls name="Systolic" />
+
+                  <Brush dataKey="idx" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
+                </LineChart>
+              </ResponsiveContainer>
+              </div>
+            </CardContent></Card>
+          )}
+          {hasBpDia && (
+            <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
+              <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Activity className="h-3.5 w-3.5" />Diastolic BP (mmHg)</p>
+              <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+              <ResponsiveContainer width="100%" height={CHART_H}>
+                <LineChart data={chartData.filter(d => d.bp_dia != null)} margin={{ top: 12, right: 30, left: 0, bottom: 0 }}>
+                  {gradientDefs}
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="idx" tick={{ fontSize: 10 }} tickFormatter={xtick} />
+                  <YAxis tick={{ fontSize: 10 }} width={35} domain={[0, 160]} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
+
+                  <ReferenceArea y1={110} y2={160} fill="#ef4444" fillOpacity={0.12} label={{ value: 'Crisis ≥110', position: 'insideTopRight', fill: '#ef4444', fontSize: 9 }} />
+                  <ReferenceArea y1={90} y2={110} fill="#f97316" fillOpacity={0.10} label={{ value: 'High ≥90', position: 'insideTopRight', fill: '#f97316', fontSize: 9 }} />
+                  <ReferenceArea y1={0} y2={60} fill="#ef4444" fillOpacity={0.10} label={{ value: 'Low <60', position: 'insideBottomRight', fill: '#ef4444', fontSize: 9 }} />
+
+                  <ReferenceLine y={110} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
+                  <ReferenceLine y={90} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
+                  <ReferenceLine y={60} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
+
+                  <Area type="monotone" dataKey="bp_dia" fill="url(#gradDia)" stroke="none" />
+                  <Line type="monotone" dataKey="bp_dia" stroke="#a855f7" strokeWidth={2.5} dot={{ r: 4, fill: '#a855f7', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls name="Diastolic" />
+
+                  <Brush dataKey="idx" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </LineChart>
               </ResponsiveContainer>
               </div>
@@ -266,7 +311,7 @@ export default function VitalsMobile() {
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <XAxis dataKey="idx" tick={{ fontSize: 10 }} tickFormatter={xtick} />
                   <YAxis tick={{ fontSize: 10 }} width={35} />
                   <Tooltip content={<CustomTooltip />} />
                   <ReferenceArea y1={110} y2={200} fill="#ef4444" fillOpacity={0.06} />
@@ -275,7 +320,7 @@ export default function VitalsMobile() {
                   <ReferenceLine y={100} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                   <ReferenceLine y={50} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
                   <Area type="monotone" dataKey="hr" fill="url(#gradHr)" stroke="#ef4444" strokeWidth={2} dot={false} connectNulls name="HR" />
-                  <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
+                  <Brush dataKey="idx" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </AreaChart>
               </ResponsiveContainer>
               </div>
@@ -289,7 +334,7 @@ export default function VitalsMobile() {
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <XAxis dataKey="idx" tick={{ fontSize: 10 }} tickFormatter={xtick} />
                   <YAxis tick={{ fontSize: 10 }} width={35} domain={['auto', 'auto']} />
                   <Tooltip content={<CustomTooltip />} />
                   <ReferenceArea y1={38} y2={42} fill="#ef4444" fillOpacity={0.06} />
@@ -297,7 +342,7 @@ export default function VitalsMobile() {
                   <ReferenceLine y={38} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
                   <ReferenceLine y={37.5} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                   <Area type="monotone" dataKey="temp_c" fill="url(#gradTemp)" stroke="#f97316" strokeWidth={2} dot={false} connectNulls name="Temp" />
-                  <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
+                  <Brush dataKey="idx" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </AreaChart>
               </ResponsiveContainer>
               </div>
@@ -311,7 +356,7 @@ export default function VitalsMobile() {
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <XAxis dataKey="idx" tick={{ fontSize: 10 }} tickFormatter={xtick} />
                   <YAxis tick={{ fontSize: 10 }} width={35} domain={[80, 100]} />
                   <Tooltip content={<CustomTooltip />} />
                   <ReferenceArea y1={0} y2={92} fill="#ef4444" fillOpacity={0.06} />
@@ -319,7 +364,7 @@ export default function VitalsMobile() {
                   <ReferenceLine y={92} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
                   <ReferenceLine y={95} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                   <Area type="monotone" dataKey="spo2" fill="url(#gradSpo2)" stroke="#22c55e" strokeWidth={2} dot={false} connectNulls name="SpO₂" />
-                  <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
+                  <Brush dataKey="idx" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </AreaChart>
               </ResponsiveContainer>
               </div>
@@ -333,11 +378,11 @@ export default function VitalsMobile() {
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <XAxis dataKey="idx" tick={{ fontSize: 10 }} tickFormatter={xtick} />
                   <YAxis tick={{ fontSize: 10 }} width={35} domain={['auto', 'auto']} />
                   <Tooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey="weight_kg" fill="url(#gradWeight)" stroke="#8b5cf6" strokeWidth={2} dot={false} connectNulls name="Weight" />
-                  <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
+                  <Brush dataKey="idx" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </AreaChart>
               </ResponsiveContainer>
               </div>
