@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from .routes import patient, medications, vitals, glucose, labs, wounds, symptoms, appointments, actions, alerts_route, summary, export_data, chat, good_tracking, plans, auth_route
 from .auth import verify_token
 
-PUBLIC_PATHS = {"/api/auth/login", "/api/health", "/docs", "/openapi.json", "/favicon.ico"}
+PUBLIC_PATHS = {"/api/auth/login", "/api/health", "/api/chat/", "/docs", "/openapi.json", "/favicon.ico"}
 
 app = FastAPI(title="Care Tracker", version="1.0.0")
 

@@ -298,7 +298,7 @@ export default function GlucosePage() {
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-sm font-medium flex items-center gap-2"><Droplet className="h-4 w-4 text-muted-foreground" />Glucose Trend</CardTitle></CardHeader>
                     <CardContent className="overflow-visible">
-                      <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+                      <div className="[&>div]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing">
                       <ResponsiveContainer width="100%" height={300}>
                         <AreaChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 0 }}>
                           <defs>

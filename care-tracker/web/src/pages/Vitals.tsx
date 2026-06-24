@@ -52,19 +52,24 @@ const CHART_HEIGHT = 200;
 const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   const displayLabel = payload[0]?.payload?.fullLabel ?? '';
+  const seen = new Set<string>();
   return (
     <div className="bg-background border rounded-lg shadow-lg p-2.5 text-xs space-y-1">
       <p className="font-medium text-muted-foreground">{displayLabel}</p>
-      {payload.map((p: any) => (
+      {payload
+        .filter((p: any) => p.color && p.color !== 'none')
+        .filter((p: any) => {
+          if (seen.has(p.dataKey)) return false;
+          seen.add(p.dataKey);
+          return true;
+        })
+        .map((p: any) => (
         <div key={p.dataKey} className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
-          <span className="text-muted-foreground">{p.name}:</span>
+          <span className="text-muted-foreground">{p.name || p.dataKey}:</span>
           <span className="font-medium">{p.value}{p.dataKey === 'temp_c' ? '°C' : p.dataKey === 'spo2' ? '%' : p.dataKey === 'hr' ? ' bpm' : p.dataKey === 'weight_kg' ? ' kg' : ' mmHg'}</span>
         </div>
       ))}
-    </div>
-  );
-};
 
 const gradientDefs = (
   <defs>
@@ -477,7 +482,7 @@ export default function VitalsPage() {
                   {/* Systolic BP Chart */}
                   {hasBpSys && (
                     <ChartCard title="Systolic BP (mmHg)" icon={Activity}>
-                      <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+                      <div className="[&>div]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing">
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <LineChart data={chartData.filter((d) => d.bp_sys != null)} margin={{ top: 12, right: 30, left: 0, bottom: 0 }}>
                           {gradientDefs}
@@ -507,7 +512,7 @@ export default function VitalsPage() {
                   {/* Diastolic BP Chart */}
                   {hasBpDia && (
                     <ChartCard title="Diastolic BP (mmHg)" icon={Activity}>
-                      <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+                      <div className="[&>div]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing">
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <LineChart data={chartData.filter((d) => d.bp_dia != null)} margin={{ top: 12, right: 30, left: 0, bottom: 0 }}>
                           {gradientDefs}
@@ -537,7 +542,7 @@ export default function VitalsPage() {
                   {/* Heart Rate Chart */}
                   {hasHr && (
                     <ChartCard title="Heart Rate (bpm)" icon={Heart}>
-                      <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+                      <div className="[&>div]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing">
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <AreaChart data={chartData} margin={chartMargin}>
                           {gradientDefs}
@@ -562,7 +567,7 @@ export default function VitalsPage() {
                   {/* Temperature Chart */}
                   {hasTemp && (
                     <ChartCard title="Temperature (°C)" icon={Thermometer}>
-                      <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+                      <div className="[&>div]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing">
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <AreaChart data={chartData} margin={chartMargin}>
                           {gradientDefs}
@@ -585,7 +590,7 @@ export default function VitalsPage() {
                   {/* SpO2 Chart */}
                   {hasSpo2 && (
                     <ChartCard title="SpO₂ (%)" icon={Waves}>
-                      <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+                      <div className="[&>div]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing">
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <AreaChart data={chartData} margin={chartMargin}>
                           {gradientDefs}
@@ -608,7 +613,7 @@ export default function VitalsPage() {
                   {/* Weight Chart */}
                   {hasWeight && (
                     <ChartCard title="Weight (kg)" icon={Scale}>
-                      <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+                      <div className="[&>div]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing">
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <AreaChart data={chartData} margin={chartMargin}>
                           {gradientDefs}

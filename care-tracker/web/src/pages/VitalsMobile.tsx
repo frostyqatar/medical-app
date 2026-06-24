@@ -151,13 +151,21 @@ export default function VitalsMobile() {
   const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null
     const displayLabel = payload[0]?.payload?.fullLabel ?? ''
+    const seen = new Set<string>()
     return (
       <div className="bg-background border rounded-lg shadow-lg p-2.5 text-xs space-y-1">
         <p className="font-medium text-muted-foreground">{displayLabel}</p>
-        {payload.map((p: any) => (
+        {payload
+          .filter((p: any) => p.color && p.color !== 'none')
+          .filter((p: any) => {
+            if (seen.has(p.dataKey)) return false
+            seen.add(p.dataKey)
+            return true
+          })
+          .map((p: any) => (
           <div key={p.dataKey} className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
-            <span className="text-muted-foreground">{p.name}:</span>
+            <span className="text-muted-foreground">{p.name || p.dataKey}:</span>
             <span className="font-medium">{p.value}{p.dataKey === 'temp_c' ? '°C' : p.dataKey === 'spo2' ? '%' : p.dataKey === 'hr' ? ' bpm' : p.dataKey === 'weight_kg' ? ' kg' : ' mmHg'}</span>
           </div>
         ))}
@@ -246,7 +254,7 @@ export default function VitalsMobile() {
           {hasBpSys && (
             <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Activity className="h-3.5 w-3.5" />Systolic BP (mmHg)</p>
-              <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+              <div className="[&>div]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing">
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <LineChart data={chartData.filter(d => d.bp_sys != null)} margin={{ top: 12, right: 30, left: 0, bottom: 0 }}>
                   {gradientDefs}
@@ -275,7 +283,7 @@ export default function VitalsMobile() {
           {hasBpDia && (
             <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Activity className="h-3.5 w-3.5" />Diastolic BP (mmHg)</p>
-              <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+              <div className="[&>div]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing">
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <LineChart data={chartData.filter(d => d.bp_dia != null)} margin={{ top: 12, right: 30, left: 0, bottom: 0 }}>
                   {gradientDefs}
@@ -304,7 +312,7 @@ export default function VitalsMobile() {
           {hasHr && (
             <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Heart className="h-3.5 w-3.5" />Heart Rate (bpm)</p>
-              <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+              <div className="[&>div]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing">
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
@@ -328,7 +336,7 @@ export default function VitalsMobile() {
           {hasTemp && (
             <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Thermometer className="h-3.5 w-3.5" />Temperature (°C)</p>
-              <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+              <div className="[&>div]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing">
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
@@ -350,7 +358,7 @@ export default function VitalsMobile() {
           {hasSpo2 && (
             <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Waves className="h-3.5 w-3.5" />SpO₂ (%)</p>
-              <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+              <div className="[&>div]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing">
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
@@ -372,7 +380,7 @@ export default function VitalsMobile() {
           {hasWeight && (
             <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Scale className="h-3.5 w-3.5" />Weight (kg)</p>
-              <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+              <div className="[&>div]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing">
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
