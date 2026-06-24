@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Droplet, TrendingUp, TrendingDown, Minus, X, FlaskConical } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { fetchGlucose, createGlucose, deleteGlucose, fetchLabs } from '@/api'
 import type { Glucose, Lab } from '@/api'
 
@@ -118,12 +118,18 @@ export default function GlucoseMobile() {
         <>
           <Card className="rounded-xl"><CardContent className="p-3">
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} width={35} /><Tooltip />
-                <ReferenceLine y={70} stroke="hsl(var(--destructive))" strokeDasharray="4 4" />
-                <ReferenceLine y={180} stroke="hsl(45 93% 47%)" strokeDasharray="4 4" />
-                <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-              </LineChart>
+              <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="glucoseGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} /><stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} /></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} width={35} />
+                <Tooltip />
+                <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: 'Low 70', position: 'left', fontSize: 10, fill: '#ef4444' }} />
+                <ReferenceLine y={180} stroke="#f97316" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: 'High 180', position: 'left', fontSize: 10, fill: '#f97316' }} />
+                <Area type="monotone" dataKey="value" fill="url(#glucoseGrad)" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+              </AreaChart>
             </ResponsiveContainer>
           </CardContent></Card>
 

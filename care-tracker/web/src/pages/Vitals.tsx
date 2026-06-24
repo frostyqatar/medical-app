@@ -17,6 +17,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
+  Legend,
 } from 'recharts';
 import { fetchVitals, fetchLatestVitals, createVital, deleteVital } from '@/api';
 import type { Vital } from '@/api';
@@ -43,6 +45,35 @@ function formatDateTime(ts: string) {
 }
 
 const CHART_HEIGHT = 200;
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-background border rounded-lg shadow-lg p-2.5 text-xs space-y-1">
+      <p className="font-medium text-muted-foreground">{label}</p>
+      {payload.map((p: any) => (
+        <div key={p.dataKey} className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
+          <span className="text-muted-foreground">{p.name}:</span>
+          <span className="font-medium">{p.value}{p.dataKey === 'temp_c' ? '°C' : p.dataKey === 'spo2' ? '%' : p.dataKey === 'hr' ? ' bpm' : p.dataKey === 'weight_kg' ? ' kg' : ' mmHg'}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const gradientDefs = (
+  <defs>
+    <linearGradient id="gradSys" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} /><stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} /></linearGradient>
+    <linearGradient id="gradDia" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.15} /><stop offset="100%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.02} /></linearGradient>
+    <linearGradient id="gradHr" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ef4444" stopOpacity={0.15} /><stop offset="100%" stopColor="#ef4444" stopOpacity={0.02} /></linearGradient>
+    <linearGradient id="gradTemp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f97316" stopOpacity={0.2} /><stop offset="100%" stopColor="#f97316" stopOpacity={0.02} /></linearGradient>
+    <linearGradient id="gradSpo2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#22c55e" stopOpacity={0.2} /><stop offset="100%" stopColor="#22c55e" stopOpacity={0.02} /></linearGradient>
+    <linearGradient id="gradWeight" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.2} /><stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.02} /></linearGradient>
+  </defs>
+);
+
+const chartMargin = { top: 5, right: 10, left: 0, bottom: 0 };
 
 function ChartCard({
   title,
@@ -382,31 +413,19 @@ export default function VitalsPage() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   {/* BP Chart */}
                   {hasBp && (
-                    <ChartCard title="Blood Pressure" icon={Activity}>
+                    <ChartCard title="Blood Pressure (mmHg)" icon={Activity}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                          <XAxis dataKey="date" className="text-xs" tick={{ fontSize: 12 }} />
-                          <YAxis className="text-xs" tick={{ fontSize: 12 }} width={40} />
-                          <Tooltip />
-                          <Line
-                            type="monotone"
-                            dataKey="bp_sys"
-                            stroke="hsl(var(--primary))"
-                            strokeWidth={2}
-                            dot={false}
-                            name="Systolic"
-                            connectNulls
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="bp_dia"
-                            stroke="hsl(var(--muted-foreground))"
-                            strokeWidth={2}
-                            dot={false}
-                            name="Diastolic"
-                            connectNulls
-                          />
+                        <LineChart data={chartData} margin={chartMargin}>
+                          {gradientDefs}
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                          <YAxis tick={{ fontSize: 12 }} width={40} />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Legend wrapperStyle={{ fontSize: 11 }} />
+                          <ReferenceLine y={140} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
+                          <ReferenceLine y={90} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
+                          <Area type="monotone" dataKey="bp_sys" fill="url(#gradSys)" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} connectNulls name="Systolic" />
+                          <Line type="monotone" dataKey="bp_dia" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={false} connectNulls name="Diastolic" />
                         </LineChart>
                       </ResponsiveContainer>
                     </ChartCard>
@@ -414,46 +433,35 @@ export default function VitalsPage() {
 
                   {/* Heart Rate Chart */}
                   {hasHr && (
-                    <ChartCard title="Heart Rate" icon={Heart}>
+                    <ChartCard title="Heart Rate (bpm)" icon={Heart}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                          <XAxis dataKey="date" className="text-xs" tick={{ fontSize: 12 }} />
-                          <YAxis className="text-xs" tick={{ fontSize: 12 }} width={40} />
-                          <Tooltip />
-                          <Line
-                            type="monotone"
-                            dataKey="hr"
-                            stroke="hsl(var(--primary))"
-                            strokeWidth={2}
-                            dot={false}
-                            name="Heart Rate"
-                            connectNulls
-                          />
-                        </LineChart>
+                        <AreaChart data={chartData} margin={chartMargin}>
+                          {gradientDefs}
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                          <YAxis tick={{ fontSize: 12 }} width={40} />
+                          <Tooltip content={<CustomTooltip />} />
+                          <ReferenceLine y={100} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
+                          <ReferenceLine y={50} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
+                          <Area type="monotone" dataKey="hr" fill="url(#gradHr)" stroke="#ef4444" strokeWidth={2} dot={false} connectNulls name="Heart Rate" />
+                        </AreaChart>
                       </ResponsiveContainer>
                     </ChartCard>
                   )}
 
                   {/* Temperature Chart */}
                   {hasTemp && (
-                    <ChartCard title="Temperature" icon={Thermometer}>
+                    <ChartCard title="Temperature (°C)" icon={Thermometer}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-                        <AreaChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                          <XAxis dataKey="date" className="text-xs" tick={{ fontSize: 12 }} />
-                          <YAxis className="text-xs" tick={{ fontSize: 12 }} width={40} domain={['auto', 'auto']} />
-                          <Tooltip />
-                          <Area
-                            type="monotone"
-                            dataKey="temp_c"
-                            stroke="hsl(var(--primary))"
-                            fill="hsl(var(--primary) / 0.15)"
-                            strokeWidth={2}
-                            dot={false}
-                            name="Temperature"
-                            connectNulls
-                          />
+                        <AreaChart data={chartData} margin={chartMargin}>
+                          {gradientDefs}
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                          <YAxis tick={{ fontSize: 12 }} width={40} domain={['auto', 'auto']} />
+                          <Tooltip content={<CustomTooltip />} />
+                          <ReferenceLine y={38} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
+                          <ReferenceLine y={37.5} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
+                          <Area type="monotone" dataKey="temp_c" fill="url(#gradTemp)" stroke="#f97316" strokeWidth={2} dot={false} connectNulls name="Temperature" />
                         </AreaChart>
                       </ResponsiveContainer>
                     </ChartCard>
@@ -461,46 +469,34 @@ export default function VitalsPage() {
 
                   {/* SpO2 Chart */}
                   {hasSpo2 && (
-                    <ChartCard title="SpO₂" icon={Waves}>
+                    <ChartCard title="SpO₂ (%)" icon={Waves}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                          <XAxis dataKey="date" className="text-xs" tick={{ fontSize: 12 }} />
-                          <YAxis className="text-xs" tick={{ fontSize: 12 }} width={40} domain={[80, 100]} />
-                          <Tooltip />
-                          <Line
-                            type="monotone"
-                            dataKey="spo2"
-                            stroke="hsl(var(--primary))"
-                            strokeWidth={2}
-                            dot={false}
-                            name="SpO₂"
-                            connectNulls
-                          />
-                        </LineChart>
+                        <AreaChart data={chartData} margin={chartMargin}>
+                          {gradientDefs}
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                          <YAxis tick={{ fontSize: 12 }} width={40} domain={[80, 100]} />
+                          <Tooltip content={<CustomTooltip />} />
+                          <ReferenceLine y={92} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
+                          <ReferenceLine y={95} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
+                          <Area type="monotone" dataKey="spo2" fill="url(#gradSpo2)" stroke="#22c55e" strokeWidth={2} dot={false} connectNulls name="SpO₂" />
+                        </AreaChart>
                       </ResponsiveContainer>
                     </ChartCard>
                   )}
 
                   {/* Weight Chart */}
                   {hasWeight && (
-                    <ChartCard title="Weight" icon={Scale}>
+                    <ChartCard title="Weight (kg)" icon={Scale}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                          <XAxis dataKey="date" className="text-xs" tick={{ fontSize: 12 }} />
-                          <YAxis className="text-xs" tick={{ fontSize: 12 }} width={40} domain={['auto', 'auto']} />
-                          <Tooltip />
-                          <Line
-                            type="monotone"
-                            dataKey="weight_kg"
-                            stroke="hsl(var(--primary))"
-                            strokeWidth={2}
-                            dot={false}
-                            name="Weight"
-                            connectNulls
-                          />
-                        </LineChart>
+                        <AreaChart data={chartData} margin={chartMargin}>
+                          {gradientDefs}
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                          <YAxis tick={{ fontSize: 12 }} width={40} domain={['auto', 'auto']} />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Area type="monotone" dataKey="weight_kg" fill="url(#gradWeight)" stroke="#8b5cf6" strokeWidth={2} dot={false} connectNulls name="Weight" />
+                        </AreaChart>
                       </ResponsiveContainer>
                     </ChartCard>
                   )}

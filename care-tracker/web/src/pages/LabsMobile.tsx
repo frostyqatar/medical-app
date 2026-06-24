@@ -8,7 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { FlaskConical, Plus, ChevronDown, ChevronUp, Trash2, TrendingUp, TrendingDown, Minus, Info, Droplet } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { fetchLabs, fetchLabTests, fetchLabTrend, createLab, deleteLab, fetchLatestGlucose } from '@/api'
 import type { Lab, Glucose } from '@/api'
 import { getLabInfo } from './labInfo'
@@ -146,12 +146,18 @@ export default function LabsMobile() {
           {chartData.length > 0 && (
             <Card className="rounded-xl"><CardContent className="p-3">
               <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} width={40} /><RTooltip />
-                  {trend?.[0]?.ref_low != null && <ReferenceLine y={trend[0].ref_low} stroke="hsl(var(--destructive))" strokeDasharray="4 4" label={{ value: `Low ${trend[0].ref_low}`, position: 'left', fontSize: 10 }} />}
-                  {trend?.[0]?.ref_high != null && <ReferenceLine y={trend[0].ref_high} stroke="hsl(var(--destructive))" strokeDasharray="4 4" label={{ value: `High ${trend[0].ref_high}`, position: 'left', fontSize: 10 }} />}
-                  <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                </LineChart>
+                <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="labGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} /><stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} /></linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} width={40} />
+                  <RTooltip />
+                  {trend?.[0]?.ref_low != null && <ReferenceLine y={trend[0].ref_low} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${trend[0].ref_low}`, position: 'left', fontSize: 10, fill: '#ef4444' }} />}
+                  {trend?.[0]?.ref_high != null && <ReferenceLine y={trend[0].ref_high} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${trend[0].ref_high}`, position: 'left', fontSize: 10, fill: '#ef4444' }} />}
+                  <Area type="monotone" dataKey="value" fill="url(#labGrad)" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                </AreaChart>
               </ResponsiveContainer>
             </CardContent></Card>
           )}
