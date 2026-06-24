@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Activity, Heart, Thermometer, Waves, Scale, X, Pencil, ChevronDown, ChevronUp } from 'lucide-react'
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts'
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend, ReferenceArea, Brush } from 'recharts'
 import { fetchVitals, fetchLatestVitals, createVital, deleteVital, updateVital } from '@/api'
 import type { Vital } from '@/api'
 
@@ -165,7 +165,7 @@ export default function VitalsMobile() {
     </defs>
   )
 
-  const sharedChartProps = { margin: { top: 5, right: 5, left: -10, bottom: 0 } }
+  const sharedChartProps = { margin: { top: 5, right: 15, left: -10, bottom: 0 } }
 
   return (
     <div className="space-y-4">
@@ -235,25 +235,32 @@ export default function VitalsMobile() {
           {hasBp && (
             <Card className="rounded-xl"><CardContent className="p-3">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Activity className="h-3.5 w-3.5" />Blood Pressure (mmHg)</p>
+              <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <LineChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} width={35} />
+                  <YAxis tick={{ fontSize: 10 }} width={35} yAxisId="left" />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
+                  <ReferenceArea y1={180} y2={250} yAxisId="left" fill="#ef4444" fillOpacity={0.06} />
+                  <ReferenceArea y1={140} y2={180} yAxisId="left" fill="#f97316" fillOpacity={0.06} />
+                  <ReferenceArea y1={0} y2={90} yAxisId="left" fill="#ef4444" fillOpacity={0.06} />
                   <ReferenceLine y={140} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                   <ReferenceLine y={90} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
-                  <Area type="monotone" dataKey="bp_sys" fill="url(#gradSys)" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} connectNulls name="Systolic" />
-                  <Line type="monotone" dataKey="bp_dia" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={false} connectNulls name="Diastolic" />
+                  <Area type="monotone" dataKey="bp_sys" fill="url(#gradSys)" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} connectNulls name="Systolic" yAxisId="left" />
+                  <Line type="monotone" dataKey="bp_dia" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={false} connectNulls name="Diastolic" yAxisId="left" />
+                  <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </LineChart>
               </ResponsiveContainer>
+              </div>
             </CardContent></Card>
           )}
           {hasHr && (
             <Card className="rounded-xl"><CardContent className="p-3">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Heart className="h-3.5 w-3.5" />Heart Rate (bpm)</p>
+              <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
@@ -261,16 +268,22 @@ export default function VitalsMobile() {
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 10 }} width={35} />
                   <Tooltip content={<CustomTooltip />} />
+                  <ReferenceArea y1={110} y2={200} fill="#ef4444" fillOpacity={0.06} />
+                  <ReferenceArea y1={0} y2={50} fill="#ef4444" fillOpacity={0.06} />
+                  <ReferenceArea y1={100} y2={110} fill="#f97316" fillOpacity={0.06} />
                   <ReferenceLine y={100} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                   <ReferenceLine y={50} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
                   <Area type="monotone" dataKey="hr" fill="url(#gradHr)" stroke="#ef4444" strokeWidth={2} dot={false} connectNulls name="HR" />
+                  <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </AreaChart>
               </ResponsiveContainer>
+              </div>
             </CardContent></Card>
           )}
           {hasTemp && (
             <Card className="rounded-xl"><CardContent className="p-3">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Thermometer className="h-3.5 w-3.5" />Temperature (°C)</p>
+              <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
@@ -278,16 +291,21 @@ export default function VitalsMobile() {
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 10 }} width={35} domain={['auto', 'auto']} />
                   <Tooltip content={<CustomTooltip />} />
+                  <ReferenceArea y1={38} y2={42} fill="#ef4444" fillOpacity={0.06} />
+                  <ReferenceArea y1={37.5} y2={38} fill="#f97316" fillOpacity={0.06} />
                   <ReferenceLine y={38} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
                   <ReferenceLine y={37.5} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                   <Area type="monotone" dataKey="temp_c" fill="url(#gradTemp)" stroke="#f97316" strokeWidth={2} dot={false} connectNulls name="Temp" />
+                  <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </AreaChart>
               </ResponsiveContainer>
+              </div>
             </CardContent></Card>
           )}
           {hasSpo2 && (
             <Card className="rounded-xl"><CardContent className="p-3">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Waves className="h-3.5 w-3.5" />SpO₂ (%)</p>
+              <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
@@ -295,16 +313,21 @@ export default function VitalsMobile() {
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 10 }} width={35} domain={[80, 100]} />
                   <Tooltip content={<CustomTooltip />} />
+                  <ReferenceArea y1={0} y2={92} fill="#ef4444" fillOpacity={0.06} />
+                  <ReferenceArea y1={92} y2={95} fill="#f97316" fillOpacity={0.06} />
                   <ReferenceLine y={92} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
                   <ReferenceLine y={95} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                   <Area type="monotone" dataKey="spo2" fill="url(#gradSpo2)" stroke="#22c55e" strokeWidth={2} dot={false} connectNulls name="SpO₂" />
+                  <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </AreaChart>
               </ResponsiveContainer>
+              </div>
             </CardContent></Card>
           )}
           {hasWeight && (
             <Card className="rounded-xl"><CardContent className="p-3">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Scale className="h-3.5 w-3.5" />Weight (kg)</p>
+              <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
@@ -313,8 +336,10 @@ export default function VitalsMobile() {
                   <YAxis tick={{ fontSize: 10 }} width={35} domain={['auto', 'auto']} />
                   <Tooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey="weight_kg" fill="url(#gradWeight)" stroke="#8b5cf6" strokeWidth={2} dot={false} connectNulls name="Weight" />
+                  <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </AreaChart>
               </ResponsiveContainer>
+              </div>
             </CardContent></Card>
           )}
             </>

@@ -8,7 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { FlaskConical, Plus, ChevronDown, ChevronUp, Trash2, TrendingUp, TrendingDown, Minus, Info, Droplet } from 'lucide-react'
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Brush } from 'recharts'
 import { fetchLabs, fetchLabTests, fetchLabTrend, createLab, deleteLab, fetchLatestGlucose } from '@/api'
 import type { Lab, Glucose } from '@/api'
 import { getLabInfo } from './labInfo'
@@ -145,8 +145,9 @@ export default function LabsMobile() {
         <>
           {chartData.length > 0 && (
             <Card className="rounded-xl"><CardContent className="p-3">
+              <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 5, right: 15, left: -10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="labGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} /><stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} /></linearGradient>
                   </defs>
@@ -154,11 +155,23 @@ export default function LabsMobile() {
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 10 }} width={40} />
                   <RTooltip />
-                  {trend?.[0]?.ref_low != null && <ReferenceLine y={trend[0].ref_low} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${trend[0].ref_low}`, position: 'left', fontSize: 10, fill: '#ef4444' }} />}
-                  {trend?.[0]?.ref_high != null && <ReferenceLine y={trend[0].ref_high} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${trend[0].ref_high}`, position: 'left', fontSize: 10, fill: '#ef4444' }} />}
+                  {trend?.[0]?.ref_low != null && (
+                    <>
+                      <ReferenceArea y1={0} y2={trend[0].ref_low} fill="#ef4444" fillOpacity={0.05} />
+                      <ReferenceLine y={trend[0].ref_low} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${trend[0].ref_low}`, position: 'left', fontSize: 10, fill: '#ef4444' }} />
+                    </>
+                  )}
+                  {trend?.[0]?.ref_high != null && (
+                    <>
+                      <ReferenceArea y1={trend[0].ref_high} y2={trend[0].ref_high * 2} fill="#ef4444" fillOpacity={0.05} />
+                      <ReferenceLine y={trend[0].ref_high} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `${trend[0].ref_high}`, position: 'left', fontSize: 10, fill: '#ef4444' }} />
+                    </>
+                  )}
                   <Area type="monotone" dataKey="value" fill="url(#labGrad)" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                  <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </AreaChart>
               </ResponsiveContainer>
+              </div>
             </CardContent></Card>
           )}
 

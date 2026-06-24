@@ -20,6 +20,8 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Legend,
+  ReferenceArea,
+  Brush,
 } from 'recharts';
 import { fetchVitals, fetchLatestVitals, createVital, deleteVital, updateVital } from '@/api';
 import type { Vital } from '@/api';
@@ -74,7 +76,7 @@ const gradientDefs = (
   </defs>
 );
 
-const chartMargin = { top: 5, right: 10, left: 0, bottom: 0 };
+const chartMargin = { top: 5, right: 15, left: 0, bottom: 0 };
 
 function ChartCard({
   title,
@@ -463,26 +465,33 @@ export default function VitalsPage() {
                   {/* BP Chart */}
                   {hasBp && (
                     <ChartCard title="Blood Pressure (mmHg)" icon={Activity}>
+                      <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <LineChart data={chartData} margin={chartMargin}>
                           {gradientDefs}
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                           <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                          <YAxis tick={{ fontSize: 12 }} width={40} />
+                          <YAxis tick={{ fontSize: 12 }} width={40} yAxisId="left" />
                           <Tooltip content={<CustomTooltip />} />
                           <Legend wrapperStyle={{ fontSize: 11 }} />
+                          <ReferenceArea y1={180} y2={250} yAxisId="left" fill="#ef4444" fillOpacity={0.06} />
+                          <ReferenceArea y1={140} y2={180} yAxisId="left" fill="#f97316" fillOpacity={0.06} />
+                          <ReferenceArea y1={0} y2={90} yAxisId="left" fill="#ef4444" fillOpacity={0.06} />
                           <ReferenceLine y={140} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                           <ReferenceLine y={90} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
-                          <Area type="monotone" dataKey="bp_sys" fill="url(#gradSys)" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} connectNulls name="Systolic" />
-                          <Line type="monotone" dataKey="bp_dia" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={false} connectNulls name="Diastolic" />
+                          <Area type="monotone" dataKey="bp_sys" fill="url(#gradSys)" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} connectNulls name="Systolic" yAxisId="left" />
+                          <Line type="monotone" dataKey="bp_dia" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={false} connectNulls name="Diastolic" yAxisId="left" />
+                          <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                         </LineChart>
                       </ResponsiveContainer>
+                      </div>
                     </ChartCard>
                   )}
 
                   {/* Heart Rate Chart */}
                   {hasHr && (
                     <ChartCard title="Heart Rate (bpm)" icon={Heart}>
+                      <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <AreaChart data={chartData} margin={chartMargin}>
                           {gradientDefs}
@@ -490,17 +499,23 @@ export default function VitalsPage() {
                           <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                           <YAxis tick={{ fontSize: 12 }} width={40} />
                           <Tooltip content={<CustomTooltip />} />
+                          <ReferenceArea y1={110} y2={200} fill="#ef4444" fillOpacity={0.06} />
+                          <ReferenceArea y1={0} y2={50} fill="#ef4444" fillOpacity={0.06} />
+                          <ReferenceArea y1={100} y2={110} fill="#f97316" fillOpacity={0.06} />
                           <ReferenceLine y={100} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                           <ReferenceLine y={50} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
                           <Area type="monotone" dataKey="hr" fill="url(#gradHr)" stroke="#ef4444" strokeWidth={2} dot={false} connectNulls name="Heart Rate" />
+                          <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                         </AreaChart>
                       </ResponsiveContainer>
+                      </div>
                     </ChartCard>
                   )}
 
                   {/* Temperature Chart */}
                   {hasTemp && (
                     <ChartCard title="Temperature (°C)" icon={Thermometer}>
+                      <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <AreaChart data={chartData} margin={chartMargin}>
                           {gradientDefs}
@@ -508,17 +523,22 @@ export default function VitalsPage() {
                           <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                           <YAxis tick={{ fontSize: 12 }} width={40} domain={['auto', 'auto']} />
                           <Tooltip content={<CustomTooltip />} />
+                          <ReferenceArea y1={38} y2={42} fill="#ef4444" fillOpacity={0.06} />
+                          <ReferenceArea y1={37.5} y2={38} fill="#f97316" fillOpacity={0.06} />
                           <ReferenceLine y={38} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
                           <ReferenceLine y={37.5} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                           <Area type="monotone" dataKey="temp_c" fill="url(#gradTemp)" stroke="#f97316" strokeWidth={2} dot={false} connectNulls name="Temperature" />
+                          <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                         </AreaChart>
                       </ResponsiveContainer>
+                      </div>
                     </ChartCard>
                   )}
 
                   {/* SpO2 Chart */}
                   {hasSpo2 && (
                     <ChartCard title="SpO₂ (%)" icon={Waves}>
+                      <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <AreaChart data={chartData} margin={chartMargin}>
                           {gradientDefs}
@@ -526,17 +546,22 @@ export default function VitalsPage() {
                           <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                           <YAxis tick={{ fontSize: 12 }} width={40} domain={[80, 100]} />
                           <Tooltip content={<CustomTooltip />} />
+                          <ReferenceArea y1={0} y2={92} fill="#ef4444" fillOpacity={0.06} />
+                          <ReferenceArea y1={92} y2={95} fill="#f97316" fillOpacity={0.06} />
                           <ReferenceLine y={92} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
                           <ReferenceLine y={95} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                           <Area type="monotone" dataKey="spo2" fill="url(#gradSpo2)" stroke="#22c55e" strokeWidth={2} dot={false} connectNulls name="SpO₂" />
+                          <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                         </AreaChart>
                       </ResponsiveContainer>
+                      </div>
                     </ChartCard>
                   )}
 
                   {/* Weight Chart */}
                   {hasWeight && (
                     <ChartCard title="Weight (kg)" icon={Scale}>
+                      <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <AreaChart data={chartData} margin={chartMargin}>
                           {gradientDefs}
@@ -545,8 +570,10 @@ export default function VitalsPage() {
                           <YAxis tick={{ fontSize: 12 }} width={40} domain={['auto', 'auto']} />
                           <Tooltip content={<CustomTooltip />} />
                           <Area type="monotone" dataKey="weight_kg" fill="url(#gradWeight)" stroke="#8b5cf6" strokeWidth={2} dot={false} connectNulls name="Weight" />
+                          <Brush dataKey="date" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                         </AreaChart>
                       </ResponsiveContainer>
+                      </div>
                     </ChartCard>
                   )}
                 </div>

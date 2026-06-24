@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarClock, CheckCircle2, XCircle, Plus } from 'lucide-react';
+import { CalendarClock, CheckCircle2, XCircle, Plus, Pencil } from 'lucide-react';
 import {
   fetchAppointments,
   createAppointment,
@@ -163,6 +163,39 @@ export default function AppointmentsPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  const [editTarget, setEditTarget] = useState<Appointment | null>(null)
+  const [editScheduled, setEditScheduled] = useState('')
+  const [editSpecialty, setEditSpecialty] = useState('')
+  const [editNotes, setEditNotes] = useState('')
+
+  function toDatetimeLocal(ts: string): string {
+    const d = new Date(ts)
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
+  function openEdit(appt: Appointment) {
+    setEditTarget(appt)
+    setEditScheduled(toDatetimeLocal(appt.scheduled_for))
+    setEditSpecialty(appt.specialty || '')
+    setEditNotes(appt.notes || '')
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editTarget || !editScheduled || !editSpecialty.trim()) return
+    setSubmitting(true)
+    try {
+      await updateAppointment(editTarget.id, {
+        scheduled_for: new Date(editScheduled).toISOString(),
+        specialty: editSpecialty.trim(),
+        notes: editNotes.trim() || undefined,
+      })
+      setEditTarget(null)
+      loadAppointments()
+    } catch { setError('Failed to update') } finally { setSubmitting(false) }
   }
 
   function getFilteredAppointments(): Appointment[] {
@@ -347,6 +380,14 @@ export default function AppointmentsPage() {
                               <div className="flex items-center gap-1 shrink-0">
                                 <Button
                                   variant="outline"
+                                  size="sm"
+                                  className="min-h-[44px] min-w-[44px] p-0"
+                                  onClick={() => openEdit(appt)}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="outline"
                                   className="min-h-[44px]"
                                   onClick={() => setDoneTarget(appt)}
                                 >
@@ -362,6 +403,16 @@ export default function AppointmentsPage() {
                                   <XCircle className="h-3.5 w-3.5" />
                                 </Button>
                               </div>
+                            )}
+                            {!isUpcoming && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="min-h-[44px] min-w-[44px] p-0 shrink-0"
+                                onClick={() => openEdit(appt)}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
                             )}
                           </div>
                         </CardContent>
@@ -425,6 +476,22 @@ export default function AppointmentsPage() {
               {submitting ? 'Saving...' : 'Confirm'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editTarget !== null} onOpenChange={o => { if (!o) setEditTarget(null) }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Appointment</DialogTitle></DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-3">
+            <div className="space-y-1"><Label>Date &amp; Time</Label><Input type="datetime-local" value={editScheduled} onChange={e => setEditScheduled(e.target.value)} /></div>
+            <div className="space-y-1"><Label>Specialty</Label><Input placeholder="e.g. Cardiology" value={editSpecialty} onChange={e => setEditSpecialty(e.target.value)} /></div>
+            <div className="space-y-1"><Label>Notes</Label><Input placeholder="Any details..." value={editNotes} onChange={e => setEditNotes(e.target.value)} /></div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <DialogFooter>
+              <Button type="button" variant="outline" className="min-h-[44px]" onClick={() => setEditTarget(null)}>Cancel</Button>
+              <Button type="submit" className="min-h-[44px]" disabled={submitting || !editScheduled || !editSpecialty.trim()}>{submitting ? 'Saving...' : 'Save'}</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
