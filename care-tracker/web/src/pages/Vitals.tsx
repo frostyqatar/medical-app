@@ -465,7 +465,7 @@ export default function VitalsPage() {
                   {/* BP Chart */}
                   {hasBp && (
                     <ChartCard title="Blood Pressure (mmHg)" icon={Activity}>
-                      <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+                      <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <LineChart data={chartData} margin={chartMargin}>
                           {gradientDefs}
@@ -492,7 +492,7 @@ export default function VitalsPage() {
                   {/* Heart Rate Chart */}
                   {hasHr && (
                     <ChartCard title="Heart Rate (bpm)" icon={Heart}>
-                      <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+                      <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <AreaChart data={chartData} margin={chartMargin}>
                           {gradientDefs}
@@ -516,7 +516,7 @@ export default function VitalsPage() {
                   {/* Temperature Chart */}
                   {hasTemp && (
                     <ChartCard title="Temperature (°C)" icon={Thermometer}>
-                      <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+                      <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <AreaChart data={chartData} margin={chartMargin}>
                           {gradientDefs}
@@ -539,7 +539,7 @@ export default function VitalsPage() {
                   {/* SpO2 Chart */}
                   {hasSpo2 && (
                     <ChartCard title="SpO₂ (%)" icon={Waves}>
-                      <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+                      <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <AreaChart data={chartData} margin={chartMargin}>
                           {gradientDefs}
@@ -562,7 +562,7 @@ export default function VitalsPage() {
                   {/* Weight Chart */}
                   {hasWeight && (
                     <ChartCard title="Weight (kg)" icon={Scale}>
-                      <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+                      <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <AreaChart data={chartData} margin={chartMargin}>
                           {gradientDefs}

@@ -235,7 +235,7 @@ export default function VitalsMobile() {
           {hasBp && (
             <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Activity className="h-3.5 w-3.5" />Blood Pressure (mmHg)</p>
-              <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+              <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <LineChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
@@ -261,7 +261,7 @@ export default function VitalsMobile() {
           {hasHr && (
             <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Heart className="h-3.5 w-3.5" />Heart Rate (bpm)</p>
-              <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+              <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
@@ -284,7 +284,7 @@ export default function VitalsMobile() {
           {hasTemp && (
             <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Thermometer className="h-3.5 w-3.5" />Temperature (°C)</p>
-              <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+              <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
@@ -306,7 +306,7 @@ export default function VitalsMobile() {
           {hasSpo2 && (
             <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Waves className="h-3.5 w-3.5" />SpO₂ (%)</p>
-              <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+              <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}
@@ -328,7 +328,7 @@ export default function VitalsMobile() {
           {hasWeight && (
             <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Scale className="h-3.5 w-3.5" />Weight (kg)</p>
-              <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+              <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <AreaChart data={chartData} {...sharedChartProps}>
                   {gradientDefs}

@@ -117,7 +117,7 @@ export default function GlucoseMobile() {
       ) : (
         <>
           <Card className="rounded-xl"><CardContent className="p-3">
-            <div className="[&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
+            <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
             <ResponsiveContainer width="100%" height={250}>
               <AreaChart data={chartData} margin={{ top: 5, right: 15, left: -10, bottom: 0 }}>
                 <defs>
