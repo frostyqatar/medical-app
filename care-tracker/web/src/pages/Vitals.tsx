@@ -70,6 +70,8 @@ const CustomTooltip = ({ active, payload }: any) => {
           <span className="font-medium">{p.value}{p.dataKey === 'temp_c' ? '°C' : p.dataKey === 'spo2' ? '%' : p.dataKey === 'hr' ? ' bpm' : p.dataKey === 'weight_kg' ? ' kg' : ' mmHg'}</span>
         </div>
       ))}
+  );
+};
 
 const gradientDefs = (
   <defs>
@@ -499,8 +501,8 @@ export default function VitalsPage() {
                           <ReferenceLine y={140} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                           <ReferenceLine y={90} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
 
-                          <Area type="monotone" dataKey="bp_sys" fill="url(#gradSys)" stroke="none" />
-                          <Line type="monotone" dataKey="bp_sys" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls />
+                          <Area type="monotone" dataKey="bp_sys" fill="url(#gradSys)" stroke="none" name="Systolic" />
+                          <Line type="monotone" dataKey="bp_sys" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls name="Systolic" />
 
                           <Brush dataKey="idx" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                         </LineChart>
@@ -512,7 +514,7 @@ export default function VitalsPage() {
                   {/* Diastolic BP Chart */}
                   {hasBpDia && (
                     <ChartCard title="Diastolic BP (mmHg)" icon={Activity}>
-                      <div className="[&>div]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing">
+                      <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
                       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                         <LineChart data={chartData.filter((d) => d.bp_dia != null)} margin={{ top: 12, right: 30, left: 0, bottom: 0 }}>
                           {gradientDefs}
@@ -529,8 +531,8 @@ export default function VitalsPage() {
                           <ReferenceLine y={90} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                           <ReferenceLine y={60} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
 
-                          <Area type="monotone" dataKey="bp_dia" fill="url(#gradDia)" stroke="none" />
-                          <Line type="monotone" dataKey="bp_dia" stroke="#a855f7" strokeWidth={2.5} dot={{ r: 4, fill: '#a855f7', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls />
+                          <Area type="monotone" dataKey="bp_dia" fill="url(#gradDia)" stroke="none" name="Diastolic" />
+                          <Line type="monotone" dataKey="bp_dia" stroke="#a855f7" strokeWidth={2.5} dot={{ r: 4, fill: '#a855f7', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls name="Diastolic" />
 
                           <Brush dataKey="idx" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                         </LineChart>

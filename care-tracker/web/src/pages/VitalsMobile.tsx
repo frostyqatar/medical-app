@@ -271,8 +271,8 @@ export default function VitalsMobile() {
                   <ReferenceLine y={140} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                   <ReferenceLine y={90} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
 
-                  <Area type="monotone" dataKey="bp_sys" fill="url(#gradSys)" stroke="none" />
-                  <Line type="monotone" dataKey="bp_sys" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls />
+                  <Area type="monotone" dataKey="bp_sys" fill="url(#gradSys)" stroke="none" name="Systolic" />
+                  <Line type="monotone" dataKey="bp_sys" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls name="Systolic" />
 
                   <Brush dataKey="idx" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </LineChart>
@@ -283,7 +283,7 @@ export default function VitalsMobile() {
           {hasBpDia && (
             <Card className="rounded-xl"><CardContent className="p-3 overflow-visible">
               <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1"><Activity className="h-3.5 w-3.5" />Diastolic BP (mmHg)</p>
-              <div className="[&>div]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing">
+              <div className="[&_.recharts-responsive-container]:!overflow-visible [&_.recharts-wrapper]:cursor-grab [&_.recharts-wrapper]:active:cursor-grabbing" style={{ overflow: 'visible' }}>
               <ResponsiveContainer width="100%" height={CHART_H}>
                 <LineChart data={chartData.filter(d => d.bp_dia != null)} margin={{ top: 12, right: 30, left: 0, bottom: 0 }}>
                   {gradientDefs}
@@ -300,8 +300,8 @@ export default function VitalsMobile() {
                   <ReferenceLine y={90} stroke="#f97316" strokeDasharray="4 3" strokeWidth={1} />
                   <ReferenceLine y={60} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1} />
 
-                  <Area type="monotone" dataKey="bp_dia" fill="url(#gradDia)" stroke="none" />
-                  <Line type="monotone" dataKey="bp_dia" stroke="#a855f7" strokeWidth={2.5} dot={{ r: 4, fill: '#a855f7', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls />
+                  <Area type="monotone" dataKey="bp_dia" fill="url(#gradDia)" stroke="none" name="Diastolic" />
+                  <Line type="monotone" dataKey="bp_dia" stroke="#a855f7" strokeWidth={2.5} dot={{ r: 4, fill: '#a855f7', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls name="Diastolic" />
 
                   <Brush dataKey="idx" height={24} stroke="hsl(var(--border))" tickFormatter={() => ''} travellerWidth={8} />
                 </LineChart>
