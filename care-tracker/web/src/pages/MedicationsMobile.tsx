@@ -11,6 +11,7 @@ import { Pill, Plus, CheckCircle2, XCircle, Sparkles, ChevronDown, ChevronUp, In
 import { fetchMedications, createMedication, updateMedication } from '@/api'
 import type { Medication } from '@/api'
 import { useChatContext } from '@/context/ChatContext'
+import { cn } from '@/lib/utils'
 
 const CATEGORIES: Record<string, string> = {
   'BP': 'Blood Pressure', 'heart/BP': 'Blood Pressure', 'antiplatelet': 'Cardiovascular',
@@ -23,6 +24,19 @@ const CATEGORIES: Record<string, string> = {
 }
 const CATEGORY_ORDER = ['Blood Pressure', 'Cardiovascular', 'Cholesterol', 'Diabetes', 'Neuropathy & Pain', 'Pain', 'GI & Stomach', 'Skin', 'Allergy', 'Vitamins & Supplements', 'Wound Care', 'Other']
 function categorize(p: string | null) { return CATEGORIES[p || ''] || 'Other' }
+
+const CATEGORY_ICONS: Record<string, string> = {
+  'Blood Pressure': '♥', 'Cardiovascular': '🫀', 'Cholesterol': '🩸',
+  'Diabetes': '💉', 'Neuropathy & Pain': '⚡', 'Pain': '💊',
+  'GI & Stomach': '🫃', 'Skin': '🧴', 'Allergy': '🤧',
+  'Vitamins & Supplements': '💪', 'Wound Care': '🩹', 'Other': '📋',
+}
+
+const SCHEDULE_CHIPS = [
+  'once daily', 'twice daily', 'three times daily',
+  'after breakfast', 'after lunch', 'after dinner', 'at bedtime',
+  'on need basis', 'every other day', 'weekly',
+]
 
 export default function MedicationsMobile() {
   const [meds, setMeds] = useState<Medication[] | null>(null)
@@ -61,7 +75,6 @@ export default function MedicationsMobile() {
     grouped[cat].push(m)
   }
 
-  // Separate active from inactive
   const activeByCat: Record<string, Medication[]> = {}
   const inactiveMeds: Medication[] = []
   for (const cat of CATEGORY_ORDER) {
@@ -69,6 +82,13 @@ export default function MedicationsMobile() {
     activeByCat[cat] = group.filter(m => m.active === 1)
     group.filter(m => m.active === 0).forEach(m => inactiveMeds.push(m))
   }
+
+  const displayOrder = CATEGORY_ORDER.filter(cat => {
+    const active = activeByCat[cat]
+    return active && active.length > 0
+  })
+
+  const totalActive = displayOrder.reduce((sum, cat) => sum + (activeByCat[cat]?.length || 0), 0)
 
   return (
     <div className="space-y-4">
@@ -83,7 +103,24 @@ export default function MedicationsMobile() {
         <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}</div>
       ) : (
         <>
-          {CATEGORY_ORDER.map(cat => {
+          {totalActive > 0 && (
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {displayOrder.map(cat => {
+                const count = activeByCat[cat]?.length || 0
+                return (
+                  <Card key={cat} className="rounded-xl overflow-hidden">
+                    <CardContent className="p-3 text-center">
+                      <span className="text-lg">{CATEGORY_ICONS[cat] || '📋'}</span>
+                      <p className="text-lg font-bold tabular-nums">{count}</p>
+                      <p className="text-[10px] text-muted-foreground leading-tight truncate">{cat}</p>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+
+          {displayOrder.map(cat => {
             const items = activeByCat[cat]
             if (!items || items.length === 0) return null
             return (
@@ -166,38 +203,38 @@ export default function MedicationsMobile() {
               </div>
             )
           })}
-
-          {inactiveMeds.length > 0 && (
-            <div className="space-y-2 mt-4">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Inactive</h3>
-              {inactiveMeds.map(med => (
-                <Card key={med.id} className="border rounded-xl opacity-60">
-                  <CardContent className="p-4 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm line-through">{med.drug}</p>
-                        <p className="text-xs text-muted-foreground">{med.dose} &middot; {med.schedule || '—'}</p>
-                        {med.purpose && <p className="text-[11px] text-muted-foreground italic">{med.purpose}</p>}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="min-h-[44px] flex-1" onClick={() => toggleActive(med)}>
-                        <CheckCircle2 className="h-4 w-4 mr-1" />Reactivate
-                      </Button>
-                      <Button variant="ghost" size="sm" className="min-h-[44px]" onClick={() => sendMessage(`what is ${med.drug}?`)}>
-                        <Sparkles className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {meds.length === 0 && (
-            <Card className="rounded-xl"><CardContent className="p-8 text-center"><Pill className="h-8 w-8 text-muted-foreground mx-auto mb-2" /><p className="text-sm text-muted-foreground">No medications yet.</p></CardContent></Card>
-          )}
         </>
+      )}
+
+      {inactiveMeds.length > 0 && (
+        <div className="space-y-2 mt-4">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Inactive</h3>
+          {inactiveMeds.map(med => (
+            <Card key={med.id} className="border rounded-xl opacity-60">
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm line-through">{med.drug}</p>
+                    <p className="text-xs text-muted-foreground">{med.dose} &middot; {med.schedule || '—'}</p>
+                    {med.purpose && <p className="text-[11px] text-muted-foreground italic">{med.purpose}</p>}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="min-h-[44px] flex-1" onClick={() => toggleActive(med)}>
+                    <CheckCircle2 className="h-4 w-4 mr-1" />Reactivate
+                  </Button>
+                  <Button variant="ghost" size="sm" className="min-h-[44px]" onClick={() => sendMessage(`what is ${med.drug}?`)}>
+                    <Sparkles className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {meds?.length === 0 && (
+        <Card className="rounded-xl"><CardContent className="p-8 text-center"><Pill className="h-8 w-8 text-muted-foreground mx-auto mb-2" /><p className="text-sm text-muted-foreground">No medications yet.</p></CardContent></Card>
       )}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
@@ -214,7 +251,24 @@ export default function MedicationsMobile() {
             </div>
             <div className="space-y-1.5">
               <Label>Schedule</Label>
-              <Input autoCapitalize="off" autoCorrect="off" placeholder="e.g. daily, after dinner" value={form.schedule} onChange={e => setForm(f => ({ ...f, schedule: e.target.value }))} />
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {SCHEDULE_CHIPS.map(chip => (
+                  <button
+                    key={chip}
+                    type="button"
+                    className={cn(
+                      'px-2.5 py-1.5 rounded-full text-xs border transition-colors min-h-[36px]',
+                      form.schedule === chip
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                    )}
+                    onClick={() => setForm(f => ({ ...f, schedule: f.schedule === chip ? '' : chip }))}
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+              <Input autoCapitalize="off" autoCorrect="off" placeholder="Or type custom schedule..." value={form.schedule} onChange={e => setForm(f => ({ ...f, schedule: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
               <Label>Purpose</Label>
