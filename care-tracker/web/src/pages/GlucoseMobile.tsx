@@ -102,14 +102,14 @@ export default function GlucoseMobile() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label className="text-xs">Value (mg/dL)</Label><Input type="number" inputMode="numeric" placeholder="120" value={form.value_mgdl} onChange={e => setForm(f => ({ ...f, value_mgdl: e.target.value }))} /></div>
+              <div className="space-y-1"><Label className="text-xs">Value (mg/dL)</Label><Input className="h-11" type="number" inputMode="numeric" placeholder="120" value={form.value_mgdl} onChange={e => setForm(f => ({ ...f, value_mgdl: e.target.value }))} /></div>
               <div className="space-y-1"><Label className="text-xs">Context</Label>
                 <Select value={form.context} onValueChange={v => setForm(f => ({ ...f, context: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                   <SelectContent>{CONTEXTS.map(c => <SelectItem key={c} value={c}>{contextLabel(c)}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1"><Label className="text-xs">Date & Time</Label><Input type="datetime-local" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} /></div>
+              <div className="space-y-1 col-span-2"><Label className="text-xs">Date & Time</Label><Input className="h-11" type="datetime-local" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} /></div>
             </div>
             <Button type="submit" disabled={submitting} className="w-full min-h-[44px]">{submitting ? 'Recording...' : 'Record'}</Button>
             {error && <p className="text-sm text-destructive">{error}</p>}
@@ -201,15 +201,15 @@ export default function GlucoseMobile() {
                   {isEditing ? (
                     <div className="space-y-2">
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1"><Label className="text-[10px]">Value</Label><Input className="h-10 text-sm" type="number" inputMode="numeric" value={editValues.value_mgdl} onChange={e => setEditValues({ ...editValues, value_mgdl: e.target.value })} /></div>
+                        <div className="space-y-1"><Label className="text-[10px]">Value</Label><Input className="h-11 text-sm" type="number" inputMode="numeric" value={editValues.value_mgdl} onChange={e => setEditValues({ ...editValues, value_mgdl: e.target.value })} /></div>
                         <div className="space-y-1"><Label className="text-[10px]">Context</Label>
                           <Select value={editValues.context} onValueChange={v => setEditValues({ ...editValues, context: v })}>
-                            <SelectTrigger className="h-10 text-sm"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-11 text-sm"><SelectValue /></SelectTrigger>
                             <SelectContent>{CONTEXTS.map(c => <SelectItem key={c} value={c}>{contextLabel(c)}</SelectItem>)}</SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-1"><Label className="text-[10px]">Date & Time</Label><Input className="h-10 text-sm" type="datetime-local" value={editValues.date} onChange={e => setEditValues({ ...editValues, date: e.target.value })} /></div>
-                        <div className="space-y-1"><Label className="text-[10px]">Notes</Label><Input className="h-10 text-sm" value={editValues.notes} onChange={e => setEditValues({ ...editValues, notes: e.target.value })} /></div>
+                        <div className="space-y-1 col-span-2"><Label className="text-[10px]">Date & Time</Label><Input className="h-11 text-sm" type="datetime-local" value={editValues.date} onChange={e => setEditValues({ ...editValues, date: e.target.value })} /></div>
+                        <div className="space-y-1 col-span-2"><Label className="text-[10px]">Notes</Label><Input className="h-11 text-sm" value={editValues.notes} onChange={e => setEditValues({ ...editValues, notes: e.target.value })} /></div>
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" className="flex-1 min-h-[44px]" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? 'Saving...' : 'Save'}</Button>
