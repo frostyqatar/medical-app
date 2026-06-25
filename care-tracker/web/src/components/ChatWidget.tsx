@@ -68,6 +68,7 @@ export default function ChatWidget() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [streaming, setStreaming] = useState('')
   const [apiKey, setApiKey] = useState(loadKey)
   const [showKey, setShowKey] = useState(false)
   const [saved, setSaved] = useState(!!loadKey())
@@ -128,7 +129,7 @@ export default function ChatWidget() {
     const updated = [...messagesRef.current, userMsg]
     setMessages(updated)
     try {
-      const res = await fetch('/api/chat/', {
+      const res = await fetch('/api/chat/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -141,11 +142,64 @@ export default function ChatWidget() {
           api_key: apiKeyRef.current,
         }),
       })
-      const data = await res.json()
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: data.content, timestamp: fmtTime(), usage: data.usage },
-      ])
+
+      if (!res.ok) {
+        const err = await res.text()
+        setMessages((prev) => [...prev, { role: 'assistant', content: `Error: ${res.status}`, timestamp: fmtTime() }])
+        return
+      }
+
+      if (res.headers.get('content-type')?.includes('application/json')) {
+        // Non-streaming fallback (e.g. missing API key)
+        const data = await res.json()
+        setMessages((prev) => [...prev, { role: 'assistant', content: data.content, timestamp: fmtTime(), usage: data.usage }])
+        return
+      }
+
+      // Streaming path
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error('No reader')
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let full = ''
+      let finalUsage: any = null
+      setStreaming('')
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const data = line.slice(6)
+          try {
+            const parsed = JSON.parse(data)
+            if (parsed.content) {
+              full += parsed.content
+              setStreaming(full)
+            }
+            if (parsed.usage) {
+              finalUsage = parsed.usage
+            }
+            if (parsed.error) {
+              setStreaming('')
+              setMessages((prev) => [...prev, { role: 'assistant', content: `API error: ${parsed.error}`, timestamp: fmtTime() }])
+              return
+            }
+          } catch {}
+        }
+      }
+
+      // Commit the complete message
+      if (full) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: full, timestamp: fmtTime(), usage: finalUsage }])
+      }
+      setStreaming('')
     } catch {
       setMessages((prev) => [...prev, { role: 'assistant', content: 'Sorry, something went wrong.', timestamp: fmtTime() }])
     } finally {
@@ -333,18 +387,25 @@ export default function ChatWidget() {
               <div className="flex items-center gap-2 mt-1.5">
                 <span className="text-[11px] opacity-50">{m.timestamp}</span>
                 {m.usage && m.usage.total_tokens > 0 && (
-                  <>
-                    <span className="text-[11px] opacity-40">
-                      {m.usage.total_tokens} tok
-                    </span>
-                    <span className="text-[11px] opacity-40 tabular-nums">
-                      {calcCost(m.usage)}
-                    </span>
-                  </>
+                  <span className="text-[11px] opacity-40">
+                    {m.usage.total_tokens} tok{calcCost(m.usage) ? ` · ${calcCost(m.usage)}` : ''}
+                  </span>
                 )}
               </div>
             </div>
           ))}
+          {streaming && (
+            <div className="max-w-[85%] rounded-xl rounded-bl-md px-3 py-2 text-sm leading-relaxed bg-muted text-foreground">
+              <div className="overflow-x-auto">
+                <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 text-sm">
+                  <ReactMarkdown>{streaming}</ReactMarkdown>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 mt-1.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-foreground/40 animate-pulse" />
+              </div>
+            </div>
+          )}
           {loading && (
             <div className="bg-muted rounded-xl rounded-bl-md px-3 py-2 max-w-[85%] flex items-center gap-2">
               <Loader2 className="h-3 w-3 animate-spin" />

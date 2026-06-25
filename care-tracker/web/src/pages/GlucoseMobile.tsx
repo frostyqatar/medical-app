@@ -7,9 +7,9 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
-import { Droplet, TrendingUp, TrendingDown, Minus, X, FlaskConical } from 'lucide-react'
+import { Droplet, TrendingUp, TrendingDown, Minus, X, Pencil, FlaskConical } from 'lucide-react'
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Brush } from 'recharts'
-import { fetchGlucose, createGlucose, deleteGlucose, fetchLabs } from '@/api'
+import { fetchGlucose, createGlucose, deleteGlucose, updateGlucose, fetchLabs } from '@/api'
 import type { Glucose, Lab } from '@/api'
 
 const CONTEXTS = ['fasting', 'pre_meal', 'post_meal', 'random', 'bedtime']
@@ -39,8 +39,11 @@ export default function GlucoseMobile() {
   const [range, setRange] = useState(7)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [form, setForm] = useState({ value_mgdl: '', context: 'random', notes: '', date: new Date().toISOString().slice(0, 10) })
+  const [form, setForm] = useState({ value_mgdl: '', context: 'random', notes: '', date: new Date().toISOString().slice(0, 16) })
   const [labGlucose, setLabGlucose] = useState<Lab | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editValues, setEditValues] = useState({ value_mgdl: '', context: 'random', date: '', notes: '' })
+  const [savingEdit, setSavingEdit] = useState(false)
 
   const load = useCallback(async (days: number) => { setData(null); try { setData(await fetchGlucose(days)); setError(null) } catch { setError('Failed to load') } }, [])
   useEffect(() => { load(range) }, [range, load])
@@ -57,12 +60,33 @@ export default function GlucoseMobile() {
     setSubmitting(true)
     try {
       await createGlucose({ value_mgdl: Number(form.value_mgdl), context: form.context as Glucose['context'], notes: form.notes || undefined, measured_at: new Date(form.date || Date.now()).toISOString() })
-      setForm({ value_mgdl: '', context: 'random', notes: '', date: new Date().toISOString().slice(0, 10) })
+      setForm({ value_mgdl: '', context: 'random', notes: '', date: new Date().toISOString().slice(0, 16) })
       load(range)
     } catch { setError('Failed') } finally { setSubmitting(false) }
   }
 
   async function handleDelete(id: number) { await deleteGlucose(id); load(range) }
+
+  function startEdit(g: Glucose) {
+    setEditingId(g.id)
+    setEditValues({ value_mgdl: String(g.value_mgdl), context: g.context || 'random', date: g.measured_at.slice(0, 16), notes: g.notes || '' })
+  }
+  function cancelEdit() { setEditingId(null) }
+  async function saveEdit() {
+    if (editingId === null) return
+    setSavingEdit(true)
+    try {
+      await updateGlucose(editingId, {
+        value_mgdl: Number(editValues.value_mgdl),
+        context: editValues.context as Glucose['context'],
+        notes: editValues.notes || null,
+        measured_at: new Date(editValues.date || Date.now()).toISOString(),
+      })
+      setEditingId(null)
+      load(range)
+    } catch { setError('Failed to update') }
+    finally { setSavingEdit(false) }
+  }
 
   const sorted = data ? [...data].sort((a, b) => new Date(a.measured_at).getTime() - new Date(b.measured_at).getTime()) : []
   const chartData = sorted.map(g => ({ date: formatDate(g.measured_at), value: g.value_mgdl }))
@@ -85,7 +109,7 @@ export default function GlucoseMobile() {
                   <SelectContent>{CONTEXTS.map(c => <SelectItem key={c} value={c}>{contextLabel(c)}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1"><Label className="text-xs">Date</Label><Input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} /></div>
+              <div className="space-y-1"><Label className="text-xs">Date & Time</Label><Input type="datetime-local" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} /></div>
             </div>
             <Button type="submit" disabled={submitting} className="w-full min-h-[44px]">{submitting ? 'Recording...' : 'Record'}</Button>
             {error && <p className="text-sm text-destructive">{error}</p>}
@@ -169,10 +193,31 @@ export default function GlucoseMobile() {
 
           <div className="space-y-2">
             {[...sorted].reverse().map(g => {
+              const isEditing = editingId === g.id
               const borderColor = g.value_mgdl < 70 ? 'border-l-red-500' : g.value_mgdl > 250 ? 'border-l-red-500' : g.value_mgdl > 180 ? 'border-l-amber-500' : 'border-l-green-500'
               return (
               <Card key={g.id} className={`rounded-xl border-l-4 ${borderColor}`}>
-                <CardContent className="p-3 flex items-center justify-between">
+                <CardContent className="p-3">
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1"><Label className="text-[10px]">Value</Label><Input className="h-10 text-sm" type="number" inputMode="numeric" value={editValues.value_mgdl} onChange={e => setEditValues({ ...editValues, value_mgdl: e.target.value })} /></div>
+                        <div className="space-y-1"><Label className="text-[10px]">Context</Label>
+                          <Select value={editValues.context} onValueChange={v => setEditValues({ ...editValues, context: v })}>
+                            <SelectTrigger className="h-10 text-sm"><SelectValue /></SelectTrigger>
+                            <SelectContent>{CONTEXTS.map(c => <SelectItem key={c} value={c}>{contextLabel(c)}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1"><Label className="text-[10px]">Date & Time</Label><Input className="h-10 text-sm" type="datetime-local" value={editValues.date} onChange={e => setEditValues({ ...editValues, date: e.target.value })} /></div>
+                        <div className="space-y-1"><Label className="text-[10px]">Notes</Label><Input className="h-10 text-sm" value={editValues.notes} onChange={e => setEditValues({ ...editValues, notes: e.target.value })} /></div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" className="flex-1 min-h-[44px]" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? 'Saving...' : 'Save'}</Button>
+                        <Button size="sm" variant="outline" className="flex-1 min-h-[44px]" onClick={cancelEdit}>Cancel</Button>
+                      </div>
+                    </div>
+                  ) : (
+                  <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className={`text-lg font-bold ${glucoseColor(g.value_mgdl)}`}>{g.value_mgdl}</span>
@@ -182,7 +227,12 @@ export default function GlucoseMobile() {
                     <span className="text-[11px] text-muted-foreground">{formatDateTime(g.measured_at)}</span>
                     {g.notes && <p className="text-xs text-muted-foreground truncate mt-0.5">{g.notes}</p>}
                   </div>
-                  <button onClick={() => handleDelete(g.id)} className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-red-500 shrink-0"><X className="h-4 w-4" /></button>
+                  <div className="flex gap-1 shrink-0">
+                    <button onClick={() => startEdit(g)} className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-primary"><Pencil className="h-4 w-4" /></button>
+                    <button onClick={() => handleDelete(g.id)} className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-red-500 shrink-0"><X className="h-4 w-4" /></button>
+                  </div>
+                  </div>
+                  )}
                 </CardContent>
               </Card>
               )

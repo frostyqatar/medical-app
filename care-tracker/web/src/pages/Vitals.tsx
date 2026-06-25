@@ -70,6 +70,7 @@ const CustomTooltip = ({ active, payload }: any) => {
           <span className="font-medium">{p.value}{p.dataKey === 'temp_c' ? '°C' : p.dataKey === 'spo2' ? '%' : p.dataKey === 'hr' ? ' bpm' : p.dataKey === 'weight_kg' ? ' kg' : ' mmHg'}</span>
         </div>
       ))}
+    </div>
   );
 };
 

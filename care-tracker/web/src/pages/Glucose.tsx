@@ -87,7 +87,7 @@ export default function GlucosePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [form, setForm] = useState({ value_mgdl: '', context: 'random' as string, notes: '', date: new Date().toISOString().slice(0, 10) });
+  const [form, setForm] = useState({ value_mgdl: '', context: 'random' as string, notes: '', date: new Date().toISOString().slice(0, 16) });
 
   // Inline edit state
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -116,7 +116,7 @@ export default function GlucosePage() {
         notes: form.notes || undefined,
         measured_at: new Date(form.date || Date.now()).toISOString(),
       });
-      setForm({ value_mgdl: '', context: 'random', notes: '', date: new Date().toISOString().slice(0, 10) });
+      setForm({ value_mgdl: '', context: 'random', notes: '', date: new Date().toISOString().slice(0, 16) });
       loadGlucose(range);
     } catch { setError('Failed to record glucose reading'); }
     finally { setSubmitting(false); }
@@ -124,7 +124,7 @@ export default function GlucosePage() {
 
   function startEdit(g: Glucose) {
     setEditingId(g.id);
-    setEditValues({ value_mgdl: String(g.value_mgdl), context: g.context || 'random', date: g.measured_at.slice(0, 10), notes: g.notes || '' });
+    setEditValues({ value_mgdl: String(g.value_mgdl), context: g.context || 'random', date: g.measured_at.slice(0, 16), notes: g.notes || '' });
   }
 
   function cancelEdit() { setEditingId(null); }
@@ -181,8 +181,8 @@ export default function GlucosePage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="glucose-date">Date</Label>
-                <Input id="glucose-date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                <Label htmlFor="glucose-date">Date & Time</Label>
+                <Input id="glucose-date" type="datetime-local" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="glucose-notes">Notes</Label>
@@ -244,8 +244,8 @@ export default function GlucosePage() {
                             </Select>
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-[10px]">Date</Label>
-                            <Input className="h-8 text-sm" type="date" value={editValues.date} onChange={e => setEditValues({ ...editValues, date: e.target.value })} />
+                            <Label className="text-[10px]">Date & Time</Label>
+                            <Input className="h-8 text-sm" type="datetime-local" value={editValues.date} onChange={e => setEditValues({ ...editValues, date: e.target.value })} />
                           </div>
                           <div className="space-y-1">
                             <Label className="text-[10px]">Notes</Label>

@@ -2,6 +2,7 @@
 import json
 import re
 from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
 import httpx
 
 from ..db import get_db
@@ -10,12 +11,28 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 
-SYSTEM_PROMPT = """You are a clinical data assistant for a patient care tracker (PT-ANON).
-Answer questions directly and concisely using the patient's data — 2-4 sentences unless asked for detail.
-Do NOT preface answers with disclaimers like "I can't provide medical advice" or "consult your doctor." 
-The user already knows this is a tracker, not a doctor.
-Just answer the question factually about the data, drugs, conditions, labs, or appointments.
-If asked for interpretation that crosses into diagnosis or treatment, say: "That's a question for the care team — I can only report the data." """
+SYSTEM_PROMPT = """You are a clinical data analyst for patient PT-ANON. You MUST use tools to retrieve data before answering any question about the patient.
+
+CRITICAL RULES:
+1. ALWAYS call the relevant tool first when the user asks about vitals, medications, labs, glucose, wounds, symptoms, appointments, conditions, or action items. Never answer from memory.
+2. After pulling data, summarize it clearly. Include specific numbers, dates, and trends.
+3. If the user asks a general medical question ("what is systolic?"), explain it plainly and THEN offer to pull their data.
+4. Never say "let me pull" or "let me check" — just call the tool silently and present the results.
+5. Keep answers concise: 2-4 sentences for data summaries, more if asked.
+6. If asked for diagnosis/prescription/treatment: "That's a question for your care team. Here's the relevant data:"
+
+TOOL USAGE:
+- get_vitals: BP, heart rate, temperature, SpO2, weight
+- get_medications: drugs, doses, schedules, purposes
+- get_labs: lab results with reference ranges and flags
+- get_glucose: blood sugar readings by context (fasting, post-meal, etc.)
+- get_conditions: active medical conditions and notes
+- get_symptoms: logged symptoms with severity
+- get_appointments: scheduled and completed appointments
+- get_action_items: tasks, priorities, and statuses
+- get_wounds: wound assessments and flags
+- get_alerts: active system alerts
+- get_patient: patient profile (age, sex, weight, height)"""
 
 TOOLS = [
     {
@@ -311,3 +328,159 @@ async def chat(payload: dict):
             "content": msg.get("content", ""),
             "usage": total_usage,
         }
+
+
+@router.post("/stream")
+async def chat_stream(payload: dict):
+    api_key = payload.get("api_key", "")
+    messages = payload.get("messages", [])
+    context = payload.get("context", "")
+    page = payload.get("page", "")
+
+    system_content = SYSTEM_PROMPT
+    if page:
+        system_content += f"\nThe user is currently viewing the '{page}' page."
+    if context:
+        system_content += f"\n\nCurrent page data:\n{redact_pii(context)}"
+
+    full_messages = [{"role": "system", "content": system_content}]
+    for m in messages:
+        full_messages.append({"role": m["role"], "content": redact_pii(m.get("content", ""))})
+
+    if not api_key:
+        return {
+            "role": "assistant",
+            "content": "Please enter your DeepSeek API key to start.",
+            "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+        }
+
+    total_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+    def add_usage(chunk: dict):
+        if "usage" in chunk:
+            u = chunk["usage"]
+            total_usage["prompt_tokens"] += u.get("prompt_tokens", 0)
+            total_usage["completion_tokens"] += u.get("completion_tokens", 0)
+            total_usage["total_tokens"] += u.get("total_tokens", 0)
+
+    async def event_stream():
+        # Phase 1: buffer first streaming call (with tools)
+        buffered: list[str] = []
+        tool_calls: list[dict] = []
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            async with client.stream(
+                "POST", DEEPSEEK_URL,
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={
+                    "model": "deepseek-chat",
+                    "messages": full_messages,
+                    "tools": TOOLS,
+                    "temperature": 0.1,
+                    "max_tokens": 600,
+                    "stream": True,
+                },
+            ) as resp:
+                if resp.status_code != 200:
+                    text = await resp.aread()
+                    yield f"data: {json.dumps({'error': text.decode()[:200]})}\n\n"
+                    return
+
+                async for line in resp.aiter_lines():
+                    if not line.startswith("data: "):
+                        continue
+                    data_str = line[6:]
+                    if data_str == "[DONE]":
+                        continue
+                    try:
+                        chunk = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        continue
+
+                    add_usage(chunk)
+
+                    delta = chunk.get("choices", [{}])[0].get("delta", {})
+                    if not delta:
+                        continue
+
+                    content = delta.get("content")
+                    if content:
+                        buffered.append(content)
+
+                    if "tool_calls" in delta:
+                        for tc in delta["tool_calls"]:
+                            idx = tc.get("index", 0)
+                            while idx >= len(tool_calls):
+                                tool_calls.append({"id": tc.get("id", ""), "function": {"name": "", "arguments": ""}})
+                            ct = tool_calls[idx]
+                            if "id" in tc:
+                                ct["id"] = tc["id"]
+                            if "function" in tc:
+                                if "name" in tc["function"] and tc["function"]["name"]:
+                                    ct["function"]["name"] = tc["function"]["name"]
+                                if "arguments" in tc["function"]:
+                                    ct["function"]["arguments"] += tc["function"]["arguments"]
+
+            if tool_calls:
+                # Execute tools, then make a second streaming call
+                assistant_msg = {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {"id": tc["id"], "type": "function", "function": tc["function"]}
+                        for tc in tool_calls
+                    ],
+                }
+                full_messages.append(assistant_msg)
+
+                for tc in tool_calls:
+                    fn_name = tc["function"]["name"]
+                    fn_args = json.loads(tc["function"]["arguments"]) if tc["function"]["arguments"] else {}
+                    tool_result = execute_tool(fn_name, fn_args)
+                    full_messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc["id"],
+                        "content": tool_result[:3000],
+                    })
+
+                async with client.stream(
+                    "POST", DEEPSEEK_URL,
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                    json={
+                        "model": "deepseek-chat",
+                        "messages": full_messages,
+                        "temperature": 0.1,
+                        "max_tokens": 600,
+                        "stream": True,
+                    },
+                ) as resp2:
+                    if resp2.status_code != 200:
+                        text = await resp2.aread()
+                        yield f"data: {json.dumps({'error': text.decode()[:200]})}\n\n"
+                        return
+
+                    async for line in resp2.aiter_lines():
+                        if not line.startswith("data: "):
+                            continue
+                        data_str = line[6:]
+                        if data_str == "[DONE]":
+                            continue
+                        try:
+                            chunk = json.loads(data_str)
+                        except json.JSONDecodeError:
+                            continue
+
+                        add_usage(chunk)
+
+                        delta = chunk.get("choices", [{}])[0].get("delta", {})
+                        content = delta.get("content")
+                        if content:
+                            yield f"data: {json.dumps({'content': content})}\n\n"
+            else:
+                # No tool calls — replay buffered content
+                for c in buffered:
+                    yield f"data: {json.dumps({'content': c})}\n\n"
+
+        yield f"data: {json.dumps({'usage': total_usage, 'done': True})}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
