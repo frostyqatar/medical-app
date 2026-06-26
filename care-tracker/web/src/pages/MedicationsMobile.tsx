@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Pill, Plus, CheckCircle2, XCircle, Sparkles, ChevronDown, ChevronUp, Info } from 'lucide-react'
+import { Pill, Plus, CheckCircle2, XCircle, Sparkles, ChevronDown, ChevronUp, Info, HeartPulse, Heart, Droplets, Syringe, Zap, SprayCan, Paintbrush, Wind, Leaf, Bandage, ClipboardList, X, Scissors, Utensils } from 'lucide-react'
 import { fetchMedications, createMedication, updateMedication } from '@/api'
 import type { Medication } from '@/api'
 import { useChatContext } from '@/context/ChatContext'
@@ -53,12 +52,12 @@ function parseScheduleTime(schedule: string | null): string {
   return 'Other'
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  'Blood Pressure': '♥', 'Cardiovascular': '🫀', 'Cholesterol': '🩸',
-  'Diabetes': '💉', 'Neuropathy & Pain': '⚡', 'Pain': '💊',
-  'GI & Stomach': '🫃', 'Skin': '🧴', 'Skin Care': '🧴',
-  'Allergy': '🤧',
-  'Vitamins & Supplements': '💪', 'Wound Care': '🩹', 'Hair Loss': '💇', 'Other': '📋',
+const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  'Blood Pressure': HeartPulse, 'Cardiovascular': Heart, 'Cholesterol': Droplets,
+  'Diabetes': Syringe, 'Neuropathy & Pain': Zap, 'Pain': Pill,
+  'GI & Stomach': Utensils, 'Skin': SprayCan, 'Skin Care': Paintbrush,
+  'Allergy': Wind,
+  'Vitamins & Supplements': Leaf, 'Wound Care': Bandage, 'Hair Loss': Scissors, 'Other': ClipboardList,
 }
 
 const SCHEDULE_CHIPS = [
@@ -70,14 +69,24 @@ const SCHEDULE_CHIPS = [
 export default function MedicationsMobile() {
   const [meds, setMeds] = useState<Medication[] | null>(null)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
+  const [selectedCat, setSelectedCat] = useState<string | null>(null)
+  const [inactiveOpen, setInactiveOpen] = useState(false)
+  const [autoExpanded, setAutoExpanded] = useState<Set<number>>(new Set())
   const [addOpen, setAddOpen] = useState(false)
   const [form, setForm] = useState({ drug: '', dose: '', schedule: '', purpose: '', description: '' })
   const [submitting, setSubmitting] = useState(false)
   const { sendMessage } = useChatContext()
+  const medsListRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchMedications(undefined).then(setMeds).catch(() => setMeds([]))
   }, [])
+
+  useEffect(() => {
+    if (selectedCat && medsListRef.current) {
+      medsListRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [selectedCat])
 
   function load() { fetchMedications(undefined).then(setMeds).catch(() => setMeds([])) }
 
@@ -119,6 +128,7 @@ export default function MedicationsMobile() {
   })
 
   const totalActive = displayOrder.reduce((sum, cat) => sum + (activeByCat[cat]?.length || 0), 0)
+  const filteredMedsCount = selectedCat ? (activeByCat[selectedCat]?.length || 0) : totalActive
 
   return (
     <div className="space-y-4">
@@ -134,20 +144,73 @@ export default function MedicationsMobile() {
       ) : (
         <>
           {totalActive > 0 && (
+            <>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {displayOrder.map(cat => {
                 const count = activeByCat[cat]?.length || 0
+                const isSelected = selectedCat === cat
                 return (
-                  <Card key={cat} className="rounded-xl overflow-hidden">
-                    <CardContent className="p-3 text-center">
-                      <span className="text-lg">{CATEGORY_ICONS[cat] || '📋'}</span>
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedCat(null)
+                        setExpanded(prev => {
+                          const next = new Set(prev)
+                          for (const id of autoExpanded) next.delete(id)
+                          return next
+                        })
+                        setAutoExpanded(new Set())
+                      } else {
+                        setSelectedCat(cat)
+                        const catMeds = (activeByCat[cat] || []).map(m => m.id)
+                        setExpanded(prev => {
+                          const next = new Set(prev)
+                          for (const id of catMeds) next.add(id)
+                          return next
+                        })
+                        setAutoExpanded(new Set(catMeds))
+                      }
+                    }}
+                    className={cn(
+                      'rounded-xl overflow-hidden text-center transition-all active:scale-95',
+                      isSelected
+                        ? 'ring-2 ring-primary bg-accent'
+                        : 'bg-card border hover:bg-accent/50'
+                    )}
+                  >
+                    <div className="p-3">
+                      {(() => { const Icon = CATEGORY_ICONS[cat] || ClipboardList; return <Icon className={cn('h-5 w-5 mx-auto', isSelected ? 'text-primary' : 'text-muted-foreground')} />; })()}
                       <p className="text-lg font-bold tabular-nums">{count}</p>
                       <p className="text-[10px] text-muted-foreground leading-tight truncate">{cat}</p>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </button>
                 )
               })}
             </div>
+
+            {selectedCat && (
+              <div className="flex items-center gap-2 bg-accent rounded-xl px-3 py-2">
+                <span className="text-sm font-medium flex-1">
+                  Showing {activeByCat[selectedCat]?.length || 0} in {selectedCat}
+                </span>
+                <button
+                  onClick={() => {
+                    setSelectedCat(null)
+                    setExpanded(prev => {
+                      const next = new Set(prev)
+                      for (const id of autoExpanded) next.delete(id)
+                      return next
+                    })
+                    setAutoExpanded(new Set())
+                  }}
+                  className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+                >
+                  <X className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </div>
+            )}
+            </>
           )}
 
           {totalActive > 0 && (
@@ -157,7 +220,8 @@ export default function MedicationsMobile() {
                 <div className="space-y-1">
                   {(() => {
                     const scheduleCounts: Record<string, number> = {}
-                    for (const m of (meds || []).filter((x) => x.active === 1)) {
+                    const filteredMeds = (meds || []).filter((x) => x.active === 1 && (!selectedCat || categorize(x.purpose) === selectedCat))
+                    for (const m of filteredMeds) {
                       const bucket = parseScheduleTime(m.schedule)
                       scheduleCounts[bucket] = (scheduleCounts[bucket] ?? 0) + 1
                     }
@@ -169,7 +233,7 @@ export default function MedicationsMobile() {
                         <div key={bucket} className="flex items-center gap-2">
                           <span className="text-[11px] w-24 shrink-0 text-muted-foreground">{bucket}</span>
                           <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
-                            <div className="h-full bg-primary/60 rounded-full" style={{ width: `${Math.round((count / maxCount) * 100)}%` }} />
+                            <div className="h-full bg-primary/60 rounded-full transition-all" style={{ width: `${Math.round((count / maxCount) * 100)}%` }} />
                           </div>
                           <span className="text-xs font-bold tabular-nums">{count}</span>
                         </div>
@@ -178,14 +242,15 @@ export default function MedicationsMobile() {
                   })()}
                 </div>
                 <div className="flex gap-2 text-[10px] text-muted-foreground pt-1">
-                  <span className="font-medium">{(meds || []).filter(m => m.active === 1).length} active</span>
+                  <span className="font-medium">{filteredMedsCount} active</span>
                   <span>{(meds || []).filter(m => m.active === 0).length} inactive</span>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {displayOrder.map(cat => {
+          <div ref={medsListRef}>
+          {displayOrder.filter(cat => !selectedCat || selectedCat === cat).map(cat => {
             const items = activeByCat[cat]
             if (!items || items.length === 0) return null
             return (
@@ -201,7 +266,7 @@ export default function MedicationsMobile() {
                           onClick={() => {
                             setExpanded(prev => {
                               const next = new Set(prev)
-                              isExpanded ? next.delete(med.id) : next.add(med.id)
+                              if (isExpanded) next.delete(med.id); else next.add(med.id)
                               return next
                             })
                           }}
@@ -209,11 +274,6 @@ export default function MedicationsMobile() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">{med.drug}</span>
-                              {med.active === 1 ? (
-                                <Badge variant="default" className="text-[10px] h-5">Active</Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-[10px] h-5">Inactive</Badge>
-                              )}
                             </div>
                             <p className="text-xs text-muted-foreground mt-0.5">
                               {med.dose} &middot; {med.schedule || '—'}
@@ -268,33 +328,44 @@ export default function MedicationsMobile() {
               </div>
             )
           })}
+          </div>
         </>
       )}
 
       {inactiveMeds.length > 0 && (
-        <div className="space-y-2 mt-4">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Inactive</h3>
-          {inactiveMeds.map(med => (
-            <Card key={med.id} className="border rounded-xl opacity-60">
-              <CardContent className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm line-through">{med.drug}</p>
-                    <p className="text-xs text-muted-foreground">{med.dose} &middot; {med.schedule || '—'}</p>
-                    {med.purpose && <p className="text-[11px] text-muted-foreground italic">{med.purpose}</p>}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="min-h-[44px] flex-1" onClick={() => toggleActive(med)}>
-                    <CheckCircle2 className="h-4 w-4 mr-1" />Reactivate
-                  </Button>
-                  <Button variant="ghost" size="sm" className="min-h-[44px]" onClick={() => sendMessage(`what is ${med.drug}?`)}>
-                    <Sparkles className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="mt-4">
+          <button
+            onClick={() => setInactiveOpen(o => !o)}
+            className="w-full flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 py-2 min-h-[44px]"
+          >
+            <span>Inactive ({inactiveMeds.length})</span>
+            {inactiveOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+          {inactiveOpen && (
+            <div className="space-y-2">
+              {inactiveMeds.map(med => (
+                <Card key={med.id} className="border rounded-xl opacity-60">
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm line-through">{med.drug}</p>
+                        <p className="text-xs text-muted-foreground">{med.dose} &middot; {med.schedule || '—'}</p>
+                        {med.purpose && <p className="text-[11px] text-muted-foreground italic">{med.purpose}</p>}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="min-h-[44px] flex-1" onClick={() => toggleActive(med)}>
+                        <CheckCircle2 className="h-4 w-4 mr-1" />Reactivate
+                      </Button>
+                      <Button variant="ghost" size="sm" className="min-h-[44px]" onClick={() => sendMessage(`what is ${med.drug}?`)}>
+                        <Sparkles className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

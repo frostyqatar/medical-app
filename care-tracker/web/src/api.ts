@@ -89,17 +89,101 @@ export interface Plan {
 
 export interface AlertResponse { alerts: string[]; count: number; }
 
-export interface WeeklySummaryData {
+export interface VitalsRange {
+  bp_sys_min: number | null; bp_sys_max: number | null;
+  bp_dia_min: number | null; bp_dia_max: number | null;
+  hr_min: number | null; hr_max: number | null;
+  temp_min: number | null; temp_max: number | null;
+  spo2_min: number | null; spo2_max: number | null;
+}
+
+export interface TrendArrow {
+  direction: 'up' | 'down' | 'stable';
+  change: number;
+  change_pct: number;
+  is_concern: boolean;
+}
+
+export interface VitalsSummary {
+  latest: Vital | null;
+  range_7d: VitalsRange;
+  trend_bp_sys: TrendArrow | null;
+  trend_bp_dia: TrendArrow | null;
+  trend_hr: TrendArrow | null;
+  trend_temp: TrendArrow | null;
+  trend_spo2: TrendArrow | null;
+}
+
+export interface GlucoseContextBreakdown {
+  context: string;
+  count: number;
+  avg: number;
+  min: number;
+  max: number;
+}
+
+export interface GlucoseSummaryExtended {
+  latest: Glucose | null;
+  range_7d: { min_val: number | null; max_val: number | null; avg_val: number | null; reading_count: number };
+  by_context: GlucoseContextBreakdown[];
+  trend: TrendArrow | null;
+}
+
+export interface MedAdherence {
+  med_id: number;
+  drug: string;
+  taken: number;
+  total: number;
+  pct: number;
+}
+
+export interface MedicationSummaryExtended {
+  active: Medication[];
+  recently_stopped: Medication[];
+  recently_added: Medication[];
+  adherence_overall: { taken: number; total: number; pct: number };
+  adherence_by_med: MedAdherence[];
+}
+
+export interface LabWithDelta {
+  test: string;
+  latest: Lab;
+  previous: Lab | null;
+  delta_value: number | null;
+  delta_pct: number | null;
+  trend: 'up' | 'down' | 'stable' | 'new';
+}
+
+export interface WoundSiteStatus {
+  site: string;
+  latest: Wound;
+  previous: Wound | null;
+  status: 'improving' | 'stable' | 'worsening' | 'new';
+  days_since: number;
+}
+
+export interface ConditionGroup {
+  category: string;
+  items: Condition[];
+}
+
+export interface LiveSummaryData {
   patient: Patient | null;
-  vitals_range: { bp_sys_min: number | null; bp_sys_max: number | null; bp_dia_min: number | null; bp_dia_max: number | null; hr_min: number | null; hr_max: number | null; temp_min: number | null; temp_max: number | null; spo2_min: number | null; spo2_max: number | null; } | null;
-  glucose_summary: { min_val: number | null; max_val: number | null; avg_val: number | null; reading_count: number; } | null;
-  adherence: { taken: number; total: number };
-  new_symptoms: Symptom[];
-  wound_status: Wound[];
-  lab_summary: Lab[];
-  high_priority_actions: ActionItem[];
-  open_actions: ActionItem[];
-  upcoming_appointments: Appointment[];
+  conditions: ConditionGroup[];
+  alerts: string[];
+  alert_count: number;
+  vitals: VitalsSummary;
+  glucose: GlucoseSummaryExtended;
+  medications: MedicationSummaryExtended;
+  labs: LabWithDelta[];
+  wound_sites: WoundSiteStatus[];
+  symptoms: Symptom[];
+  appointments_upcoming: Appointment[];
+  appointments_recent: Appointment[];
+  actions_open: ActionItem[];
+  actions_recent_done: ActionItem[];
+  notes: GoodTracking[];
+  last_updated: string;
 }
 
 // ── Auth helper (for Python backend endpoints) ─────────────────────────────────
@@ -588,98 +672,320 @@ export async function fetchAlerts(): Promise<AlertResponse> {
   return { alerts, count: alerts.length }
 }
 
-export async function fetchWeeklySummary(): Promise<WeeklySummaryData> {
-  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString()
-  const today = new Date().toISOString().split('T')[0]
+function computeRange(vals: number[]): { min: number | null; max: number | null; avg: number | null } {
+  if (!vals.length) return { min: null, max: null, avg: null }
+  return { min: Math.min(...vals), max: Math.max(...vals), avg: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) }
+}
+
+function computeTrend(currentAvg: number | null, previousAvg: number | null, higherIsConcern: boolean): TrendArrow | null {
+  if (currentAvg == null || previousAvg == null) return null
+  const change = currentAvg - previousAvg
+  const changePct = previousAvg !== 0 ? Math.round((change / previousAvg) * 100) : 0
+  const direction = Math.abs(change) < 1 ? 'stable' : change > 0 ? 'up' : 'down'
+  let isConcern = false
+  if (higherIsConcern) isConcern = change > 5
+  else isConcern = change < -5 || (change > 10 && direction === 'up')
+  return { direction, change, change_pct: changePct, is_concern: isConcern }
+}
+
+function categorizeCondition(condition: Condition): string {
+  const text = (condition.name + ' ' + (condition.notes || '')).toLowerCase()
+  if (/heart|cardio|vascular|aneurysm|arterial|venous|bp\b|hypertension|blood pressure|anticoag|doppler|angiogram|angioplasty/i.test(text)) return 'Cardiovascular'
+  if (/diabetes|glucose|hba1c|insulin|metabolic|endocrine|thyroid|cholesterol|lipid\b|ldl\b|hdl\b|triglyceride|vitamin d\b|deficiency/i.test(text)) return 'Endocrine / Metabolic'
+  if (/neuro|nerve|brain|aneurysm|palsy|seizure|stroke|tia|carpal|tunnel|sciatica|facial/i.test(text)) return 'Neurological'
+  if (/arthrit|joint|bone|osteo|spine|cervical|lumbar|vertebr|muscle|musculo|skeletal|fracture|scoliosis|knee|bone density/i.test(text)) return 'Musculoskeletal'
+  if (/skin|rash|dermat|fungal|wound|ulcer|eczema|psoriasis|cellulitis|abscess|itch/i.test(text)) return 'Dermatological / Wound'
+  if (/gerd|reflux|stomach|gastric|peptic|ulcer|constipation|bowel|colon|ibs\b|gi\b|liver|hepatic|fatty|pancreas|gall|intestinal|gut/i.test(text)) return 'Gastrointestinal'
+  if (/uti\b|urinary|kidney|renal|bladder|prostate|gyne|endomet|ovar|uter|cervix|vaginal|thickened/i.test(text)) return 'Genitourinary'
+  if (/eye|ophthal|retin|cataract|vision|glaucoma/i.test(text)) return 'Ophthalmology'
+  if (/dental|tooth|teeth|gum|oral|caries|periodont/i.test(text)) return 'Dental / Oral'
+  if (/amputation/i.test(text)) return 'Surgical / Procedure'
+  return 'Other'
+}
+
+export async function fetchLiveSummary(): Promise<LiveSummaryData> {
+  const now = new Date()
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000).toISOString()
+  const fourteenDaysAgo = new Date(now.getTime() - 14 * 86400000).toISOString()
+  const today = now.toISOString().split('T')[0]
 
   const [
     { data: patient, error: patientErr },
+    { data: conditions, error: condErr },
     { data: vitals, error: vitalsErr },
     { data: glucose, error: glucoseErr },
-    { data: symptoms, error: symptomsErr },
+    { data: labs, error: labsErr },
     { data: wounds, error: woundsErr },
-    { data: highPriority, error: highPriErr },
-    { data: openActions, error: openErr },
+    { data: symptoms, error: symptomsErr },
     { data: appointments, error: apptErr },
-    { data: activeMeds, error: medsErr },
-    { data: allLogs, error: logsErr },
-    { data: allLabs, error: labsErr },
+    { data: actions, error: actionsErr },
+    { data: medications, error: medsErr },
+    { data: medLogs, error: logsErr },
+    { data: notes, error: notesErr },
   ] = await Promise.all([
     supabase.from('patient').select('*').eq('id', 'PT-ANON').single(),
-    supabase.from('vitals').select('*').gte('measured_at', sevenDaysAgo).order('measured_at'),
-    supabase.from('glucose_readings').select('*').gte('measured_at', sevenDaysAgo).order('measured_at'),
-    supabase.from('symptoms').select('*').gte('noted_at', sevenDaysAgo).order('noted_at', { ascending: false }),
-    supabase.from('wounds').select('*').order('assessed_at', { ascending: false }).limit(5),
-    supabase.from('action_items').select('*').eq('priority', 'HIGH').neq('status', 'done').order('created_at', { ascending: false }),
-    supabase.from('action_items').select('*').eq('status', 'open').order('created_at', { ascending: false }),
-    supabase.from('appointments').select('*').gte('scheduled_for', today).eq('status', 'planned').order('scheduled_for').limit(5),
-    supabase.from('medications').select('id').eq('active', 1),
-    supabase.from('medication_log').select('med_id,status').gte('scheduled_for', sevenDaysAgo),
+    supabase.from('conditions').select('*').eq('active', 1).order('code'),
+    supabase.from('vitals').select('*').gte('measured_at', fourteenDaysAgo).order('measured_at', { ascending: false }),
+    supabase.from('glucose_readings').select('*').gte('measured_at', fourteenDaysAgo).order('measured_at', { ascending: false }),
     supabase.from('lab_results').select('*').order('measured_at', { ascending: false }),
+    supabase.from('wounds').select('*').order('assessed_at', { ascending: false }),
+    supabase.from('symptoms').select('*').gte('noted_at', sevenDaysAgo).order('noted_at', { ascending: false }),
+    supabase.from('appointments').select('*').order('scheduled_for', { ascending: false }),
+    supabase.from('action_items').select('*').order('created_at', { ascending: false }),
+    supabase.from('medications').select('*').order('drug'),
+    supabase.from('medication_log').select('*').gte('scheduled_for', sevenDaysAgo),
+    supabase.from('good_tracking').select('*').gte('created_at', sevenDaysAgo).order('created_at', { ascending: false }),
   ])
 
-  if (patientErr || vitalsErr || glucoseErr || symptomsErr || woundsErr || highPriErr || openErr || apptErr || medsErr || logsErr || labsErr) {
-    handleError(patientErr || vitalsErr || glucoseErr || symptomsErr || woundsErr || highPriErr || openErr || apptErr || medsErr || logsErr || labsErr)
+  if (patientErr || condErr || vitalsErr || glucoseErr || labsErr || woundsErr || symptomsErr || apptErr || actionsErr || medsErr || logsErr || notesErr) {
+    handleError(patientErr || condErr || vitalsErr || glucoseErr || labsErr || woundsErr || symptomsErr || apptErr || actionsErr || medsErr || logsErr || notesErr)
   }
 
-  const vArr = vitals as Vital[]
-  let vitals_range: WeeklySummaryData['vitals_range'] = null
-  if (vArr && vArr.length > 0) {
-    const bp_sys_vals = vArr.map(v => v.bp_sys).filter((v): v is number => v !== null)
-    const bp_dia_vals = vArr.map(v => v.bp_dia).filter((v): v is number => v !== null)
-    const hr_vals = vArr.map(v => v.hr).filter((v): v is number => v !== null)
-    const temp_vals = vArr.map(v => v.temp_c).filter((v): v is number => v !== null)
-    const spo2_vals = vArr.map(v => v.spo2).filter((v): v is number => v !== null)
-    vitals_range = {
-      bp_sys_min: bp_sys_vals.length ? Math.min(...bp_sys_vals) : null,
-      bp_sys_max: bp_sys_vals.length ? Math.max(...bp_sys_vals) : null,
-      bp_dia_min: bp_dia_vals.length ? Math.min(...bp_dia_vals) : null,
-      bp_dia_max: bp_dia_vals.length ? Math.max(...bp_dia_vals) : null,
-      hr_min: hr_vals.length ? Math.min(...hr_vals) : null,
-      hr_max: hr_vals.length ? Math.max(...hr_vals) : null,
-      temp_min: temp_vals.length ? Math.min(...temp_vals) : null,
-      temp_max: temp_vals.length ? Math.max(...temp_vals) : null,
-      spo2_min: spo2_vals.length ? Math.min(...spo2_vals) : null,
-      spo2_max: spo2_vals.length ? Math.max(...spo2_vals) : null,
+  const allVitals = (vitals as Vital[]) || []
+  const weekVitals = allVitals.filter(v => v.measured_at >= sevenDaysAgo)
+  const prevVitals = allVitals.filter(v => v.measured_at < sevenDaysAgo)
+  const latestVital = weekVitals.length > 0 ? weekVitals[0] : (allVitals.length > 0 ? allVitals[0] : null)
+
+  function vitalsRange(arr: Vital[]): VitalsRange {
+    const s = (v: number | null): v is number => v !== null
+    const sys = arr.map(v => v.bp_sys).filter(s); const dia = arr.map(v => v.bp_dia).filter(s)
+    const hr = arr.map(v => v.hr).filter(s); const temp = arr.map(v => v.temp_c).filter(s)
+    const spo2 = arr.map(v => v.spo2).filter(s)
+    return {
+      bp_sys_min: sys.length ? Math.min(...sys) : null, bp_sys_max: sys.length ? Math.max(...sys) : null,
+      bp_dia_min: dia.length ? Math.min(...dia) : null, bp_dia_max: dia.length ? Math.max(...dia) : null,
+      hr_min: hr.length ? Math.min(...hr) : null, hr_max: hr.length ? Math.max(...hr) : null,
+      temp_min: temp.length ? Math.min(...temp) : null, temp_max: temp.length ? Math.max(...temp) : null,
+      spo2_min: spo2.length ? Math.min(...spo2) : null, spo2_max: spo2.length ? Math.max(...spo2) : null,
     }
   }
 
-  const gArr = glucose as Glucose[]
-  let glucose_summary: WeeklySummaryData['glucose_summary'] = null
-  if (gArr && gArr.length > 0) {
-    const values = gArr.map(g => g.value_mgdl)
-    glucose_summary = {
-      min_val: Math.min(...values),
-      max_val: Math.max(...values),
-      avg_val: Math.round(values.reduce((a, b) => a + b, 0) / values.length),
-      reading_count: values.length,
+  const vr = vitalsRange(weekVitals)
+  const prv = vitalsRange(prevVitals)
+  const cwS = weekVitals.map(v => v.bp_sys).filter((v): v is number => v !== null)
+  const cwD = weekVitals.map(v => v.bp_dia).filter((v): v is number => v !== null)
+  const cwH = weekVitals.map(v => v.hr).filter((v): v is number => v !== null)
+  const cwT = weekVitals.map(v => v.temp_c).filter((v): v is number => v !== null)
+  const cwO = weekVitals.map(v => v.spo2).filter((v): v is number => v !== null)
+  const pwS = prevVitals.map(v => v.bp_sys).filter((v): v is number => v !== null)
+  const pwD = prevVitals.map(v => v.bp_dia).filter((v): v is number => v !== null)
+  const pwH = prevVitals.map(v => v.hr).filter((v): v is number => v !== null)
+  const pwT = prevVitals.map(v => v.temp_c).filter((v): v is number => v !== null)
+  const pwO = prevVitals.map(v => v.spo2).filter((v): v is number => v !== null)
+
+  const avg = (arr: number[]) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null
+
+  const vitals_summary: VitalsSummary = {
+    latest: latestVital,
+    range_7d: vr,
+    trend_bp_sys: computeTrend(avg(cwS), avg(pwS), true),
+    trend_bp_dia: computeTrend(avg(cwD), avg(pwD), true),
+    trend_hr: computeTrend(avg(cwH), avg(pwH), true),
+    trend_temp: computeTrend(avg(cwT), avg(pwT), true),
+    trend_spo2: computeTrend(avg(cwO), avg(pwO), false),
+  }
+
+  const allGlucose = (glucose as Glucose[]) || []
+  const weekGlucose = allGlucose.filter(g => g.measured_at >= sevenDaysAgo)
+  const prevGlucose = allGlucose.filter(g => g.measured_at < sevenDaysAgo)
+  const latestGlucose = weekGlucose.length > 0 ? weekGlucose[0] : (allGlucose.length > 0 ? allGlucose[0] : null)
+
+  let glucoseRange = { min_val: null as number | null, max_val: null as number | null, avg_val: null as number | null, reading_count: 0 }
+  const ctxMap = new Map<string, number[]>()
+  if (weekGlucose.length > 0) {
+    const vals = weekGlucose.map(g => g.value_mgdl)
+    glucoseRange = { min_val: Math.min(...vals), max_val: Math.max(...vals), avg_val: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length), reading_count: vals.length }
+    for (const g of weekGlucose) {
+      const c = g.context || 'unknown'
+      if (!ctxMap.has(c)) ctxMap.set(c, [])
+      ctxMap.get(c)!.push(g.value_mgdl)
     }
   }
+  const byContext: GlucoseContextBreakdown[] = Array.from(ctxMap.entries()).map(([context, vals]) => {
+    const r = computeRange(vals)
+    return { context, count: vals.length, avg: r.avg ?? 0, min: r.min ?? 0, max: r.max ?? 0 }
+  })
 
-  const activeIds = new Set(((activeMeds as any[]) || []).map(m => m.id))
-  const logs = (allLogs as any[]) || []
-  const adherence = {
-    taken: logs.filter(l => activeIds.has(l.med_id) && l.status === 'taken').length,
-    total: logs.filter(l => activeIds.has(l.med_id)).length,
+  const prevGlucoseVals = prevGlucose.map(g => g.value_mgdl)
+  const glucose_summary: GlucoseSummaryExtended = {
+    latest: latestGlucose,
+    range_7d: glucoseRange,
+    by_context: byContext.sort((a, b) => b.count - a.count),
+    trend: computeTrend(glucoseRange.avg_val, avg(prevGlucoseVals), true),
   }
 
-  const labMap = new Map<string, Lab>()
-  for (const l of (allLabs as Lab[]) || []) {
-    if (!labMap.has(l.test)) labMap.set(l.test, l)
+  const allMeds = (medications as Medication[]) || []
+  const activeMeds = allMeds.filter(m => m.active === 1)
+  const stoppedMeds = allMeds.filter(m => m.active === 0)
+  const recentlyAdded = activeMeds.filter(m => m.start_date && m.start_date >= fourteenDaysAgo)
+  const recentlyStopped = stoppedMeds.filter(m => m.stop_date && m.stop_date >= fourteenDaysAgo)
+
+  const logs = (medLogs as MedicationLog[]) || []
+  const activeMedIds = new Set(activeMeds.map(m => m.id))
+  const activeLogs = logs.filter(l => activeMedIds.has(l.med_id))
+  const takenCount = activeLogs.filter(l => l.status === 'taken').length
+  const totalCount = activeLogs.length
+
+  const byMed = new Map<number, { taken: number; total: number }>()
+  for (const l of activeLogs) {
+    if (!byMed.has(l.med_id)) byMed.set(l.med_id, { taken: 0, total: 0 })
+    const entry = byMed.get(l.med_id)!
+    entry.total++
+    if (l.status === 'taken') entry.taken++
   }
-  const lab_summary = Array.from(labMap.values())
+  const adherenceByMed: MedAdherence[] = activeMeds.map(m => {
+    const stats = byMed.get(m.id) || { taken: 0, total: 0 }
+    return { med_id: m.id, drug: m.drug, taken: stats.taken, total: stats.total, pct: stats.total > 0 ? Math.round((stats.taken / stats.total) * 100) : 0 }
+  })
+
+  const medications_summary: MedicationSummaryExtended = {
+    active: activeMeds,
+    recently_stopped: recentlyStopped,
+    recently_added: recentlyAdded,
+    adherence_overall: { taken: takenCount, total: totalCount, pct: totalCount > 0 ? Math.round((takenCount / totalCount) * 100) : 0 },
+    adherence_by_med: adherenceByMed.sort((a, b) => a.pct - b.pct),
+  }
+
+  const allLabs = (labs as Lab[]) || []
+  const labByTest = new Map<string, Lab[]>()
+  for (const l of allLabs) {
+    if (!labByTest.has(l.test)) labByTest.set(l.test, [])
+    labByTest.get(l.test)!.push(l)
+  }
+  const labItems: LabWithDelta[] = []
+  for (const [test, entries] of labByTest) {
+    const latest = entries[0]
+    const previous = entries.length > 1 ? entries[1] : null
+    let deltaValue: number | null = null
+    let deltaPct: number | null = null
+    let trend: LabWithDelta['trend'] = 'new'
+    if (previous && latest.value != null && previous.value != null) {
+      deltaValue = latest.value - previous.value
+      deltaPct = previous.value !== 0 ? Math.round((deltaValue / Math.abs(previous.value)) * 100) : null
+      trend = Math.abs(deltaValue) < 0.01 ? 'stable' : deltaValue > 0 ? 'up' : 'down'
+    }
+    labItems.push({ test, latest, previous, delta_value: deltaValue, delta_pct: deltaPct, trend })
+  }
+
+  const allWounds = (wounds as Wound[]) || []
+  const woundBySite = new Map<string, Wound[]>()
+  for (const w of allWounds) {
+    if (!woundBySite.has(w.site)) woundBySite.set(w.site, [])
+    woundBySite.get(w.site)!.push(w)
+  }
+  const woundSites: WoundSiteStatus[] = Array.from(woundBySite.entries()).map(([site, entries]) => {
+    const latest = entries[0]
+    const previous = entries.length > 1 ? entries[1] : null
+    let status: WoundSiteStatus['status'] = 'new'
+    if (previous) {
+      const odorImproved = (latest.odor ?? 0) < (previous.odor ?? 0)
+      const colorImproved = (latest.color_change ?? 0) < (previous.color_change ?? 0)
+      const odorWorse = (latest.odor ?? 0) > (previous.odor ?? 0)
+      const colorWorse = (latest.color_change ?? 0) > (previous.color_change ?? 0)
+      if (odorImproved || colorImproved) status = 'improving'
+      else if (odorWorse || colorWorse) status = 'worsening'
+      else status = 'stable'
+    }
+    const daysSince = Math.round((now.getTime() - new Date(latest.assessed_at).getTime()) / 86400000)
+    return { site, latest, previous, status, days_since: daysSince }
+  })
+
+  const allAppointments = (appointments as Appointment[]) || []
+  const apptsUpcoming = allAppointments.filter(a => a.status === 'planned' && a.scheduled_for >= today).slice(0, 8)
+  const apptsRecent = allAppointments.filter(a => a.status === 'done').slice(0, 8)
+
+  const allActions = (actions as ActionItem[]) || []
+  const actionsOpen = allActions.filter(a => a.status === 'open')
+  const actionsDone = allActions.filter(a => a.status === 'done').slice(0, 8)
+
+  const conds = (conditions as Condition[]) || []
+  const groupMap = new Map<string, Condition[]>()
+  for (const c of conds) {
+    const cat = categorizeCondition(c)
+    if (!groupMap.has(cat)) groupMap.set(cat, [])
+    groupMap.get(cat)!.push(c)
+  }
+  const conditionGroups: ConditionGroup[] = Array.from(groupMap.entries()).map(([category, items]) => ({ category, items }))
+
+  const alerts: string[] = []
+  const fmt = (d: string) => new Date(d).toLocaleDateString()
+  for (const g of weekGlucose) {
+    const date = fmt(g.measured_at)
+    if (g.value_mgdl > 180 && g.context !== 'post_meal') alerts.push(`High glucose: ${g.value_mgdl} mg/dL on ${date}`)
+    if (g.value_mgdl < 70) alerts.push(`Low glucose: ${g.value_mgdl} mg/dL on ${date}`)
+  }
+  if (latestVital) {
+    const date = fmt(latestVital.measured_at)
+    if (latestVital.bp_sys !== null && (latestVital.bp_sys >= 140 || latestVital.bp_sys < 90)) alerts.push(`Blood pressure: ${latestVital.bp_sys}/${latestVital.bp_dia ?? '?'} mmHg on ${date}`)
+    if (latestVital.bp_dia !== null && latestVital.bp_dia >= 110) alerts.push(`High diastolic BP: ${latestVital.bp_dia} mmHg on ${date}`)
+    if (latestVital.hr !== null && (latestVital.hr > 100 || latestVital.hr < 50)) alerts.push(`${latestVital.hr > 100 ? 'High' : 'Low'} heart rate: ${latestVital.hr} bpm on ${date}`)
+    if (latestVital.spo2 !== null && latestVital.spo2 < 92) alerts.push(`Low SpO2: ${latestVital.spo2}% on ${date}`)
+    if (latestVital.temp_c !== null && latestVital.temp_c >= 38) alerts.push(`Fever: ${latestVital.temp_c}°C on ${date}`)
+  }
+  for (const w of woundSites) {
+    if ((w.latest.odor ?? 0) > 0 || (w.latest.color_change ?? 0) > 0) {
+      alerts.push(`Wound concern at ${w.site}: signs of infection on ${fmt(w.latest.assessed_at)}`)
+    }
+  }
+  for (const s of (symptoms as Symptom[]) || []) {
+    if ((s.severity ?? 0) >= 7) alerts.push(`Severe symptom: ${s.type || 'Unknown'} (severity ${s.severity}) on ${fmt(s.noted_at)}`)
+  }
+  for (const l of activeLogs) {
+    if (l.status === 'missed') {
+      const drug = activeMeds.find(m => m.id === l.med_id)?.drug || 'Unknown'
+      alerts.push(`Missed medication: ${drug} on ${fmt(l.scheduled_for)}`)
+    }
+  }
+  for (const l of allLabs.slice(0, 30)) {
+    const f = l.flag
+    if (f === 'H' || f === 'L') {
+      const sevenDaysMs = 7 * 86400000
+      if (now.getTime() - new Date(l.measured_at).getTime() < sevenDaysMs) {
+        alerts.push(`${f === 'H' ? 'High' : 'Low'} lab: ${l.test} = ${l.value} ${l.unit || ''} on ${fmt(l.measured_at)}`)
+      }
+    }
+  }
 
   return {
     patient: patient as Patient | null,
-    vitals_range,
-    glucose_summary,
-    adherence,
-    new_symptoms: (symptoms as Symptom[]) || [],
-    wound_status: (wounds as Wound[]) || [],
-    lab_summary,
-    high_priority_actions: (highPriority as ActionItem[]) || [],
-    open_actions: (openActions as ActionItem[]) || [],
-    upcoming_appointments: (appointments as Appointment[]) || [],
+    conditions: conditionGroups,
+    alerts,
+    alert_count: alerts.length,
+    vitals: vitals_summary,
+    glucose: glucose_summary,
+    medications: medications_summary,
+    labs: labItems,
+    wound_sites: woundSites,
+    symptoms: (symptoms as Symptom[]) || [],
+    appointments_upcoming: apptsUpcoming,
+    appointments_recent: apptsRecent,
+    actions_open: actionsOpen,
+    actions_recent_done: actionsDone,
+    notes: (notes as GoodTracking[]) || [],
+    last_updated: now.toISOString(),
+  }
+}
+
+export function subscribeToSummary(onChange: () => void): () => void {
+  const tables = ['vitals', 'glucose_readings', 'lab_results', 'medications', 'medication_log', 'symptoms', 'wounds', 'appointments', 'action_items', 'good_tracking', 'conditions', 'patient']
+  const channel = supabase.channel('summary-live')
+  let timer: ReturnType<typeof setTimeout> | null = null
+
+  for (const table of tables) {
+    channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(onChange, 2500)
+    })
+  }
+
+  channel.subscribe((status) => {
+    if (status === 'SUBSCRIBED') console.log('[summary] live updates active')
+    if (status === 'CHANNEL_ERROR') console.error('[summary] realtime error')
+  })
+
+  return () => {
+    if (timer) clearTimeout(timer)
+    supabase.removeChannel(channel)
   }
 }
 
