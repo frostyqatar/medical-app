@@ -3,8 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import psycopg2, psycopg2.extras, re, os
 from contextlib import contextmanager
 
-DATABASE_URL = os.environ.get("DATABASE_URL",
-    "postgresql://app_user:cAr3Tr@ck3r!2026@db.dbrwxutgbbreshlfdndl.supabase.co:5432/postgres")
+DATABASE_URL = os.environ["DATABASE_URL"]
 
 def _pg_sql(sql):
     sql = re.sub(r"datetime\('now'(?:,'localtime')?\)", "NOW()::TEXT", sql)

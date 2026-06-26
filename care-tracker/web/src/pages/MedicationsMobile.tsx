@@ -14,7 +14,7 @@ import { useChatContext } from '@/context/ChatContext'
 import { cn } from '@/lib/utils'
 
 const CATEGORIES: Record<string, string> = {
-  'BP': 'Blood Pressure', 'heart/BP': 'Blood Pressure', 'antiplatelet': 'Cardiovascular',
+  'BP': 'Blood Pressure', 'heart/BP': 'Blood Pressure', 'antiplatelet': 'Cardiovascular', 'anticoagulant': 'Cardiovascular', 'vascular protective': 'Cardiovascular',
   'cholesterol': 'Cholesterol', 'diabetes/weight': 'Diabetes', 'diabetes': 'Diabetes',
   'nerve/phantom pain': 'Neuropathy & Pain', 'nerve pain': 'Neuropathy & Pain',
   'nerve pain/mood': 'Neuropathy & Pain', 'neuropathy': 'Neuropathy & Pain',

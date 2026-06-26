@@ -5,10 +5,7 @@ import psycopg2
 import psycopg2.extras
 from contextlib import contextmanager
 
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://app_user:cAr3Tr@ck3r!2026@db.dbrwxutgbbreshlfdndl.supabase.co:5432/postgres",
-)
+DATABASE_URL = os.environ["DATABASE_URL"]
 
 
 def _pg_sql(sql):

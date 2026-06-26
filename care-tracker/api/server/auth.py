@@ -7,7 +7,7 @@ from functools import wraps
 from fastapi import Request, HTTPException
 
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "cAr3Tr@ck3r!2026")
+ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
 JWT_SECRET = os.environ.get("JWT_SECRET", hashlib.sha256(os.urandom(64)).hexdigest()[:64])
 JWT_EXPIRY_HOURS = 24
 

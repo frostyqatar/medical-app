@@ -43,7 +43,7 @@ import type { Medication, AdherenceRow, MedicationLog } from '@/api';
 import { usePageContext } from '@/context/ChatContext';
 
 const CATEGORIES: Record<string, string> = {
-  'BP': 'Blood Pressure', 'heart/BP': 'Blood Pressure', 'antiplatelet': 'Cardiovascular',
+  'BP': 'Blood Pressure', 'heart/BP': 'Blood Pressure', 'antiplatelet': 'Cardiovascular', 'anticoagulant': 'Cardiovascular', 'vascular protective': 'Cardiovascular',
   'cholesterol': 'Cholesterol', 'diabetes/weight': 'Diabetes', 'diabetes': 'Diabetes',
   'nerve/phantom pain': 'Neuropathy & Pain', 'nerve pain': 'Neuropathy & Pain',
   'nerve pain/mood': 'Neuropathy & Pain', 'neuropathy': 'Neuropathy & Pain',

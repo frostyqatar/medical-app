@@ -14,10 +14,9 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-DATABASE_URL = os.environ.get("DATABASE_URL",
-    "postgresql://app_user:cAr3Tr@ck3r!2026@db.dbrwxutgbbreshlfdndl.supabase.co:5432/postgres")
+DATABASE_URL = os.environ["DATABASE_URL"]
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "cAr3Tr@ck3r!2026")
+ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
 JWT_SECRET = os.environ.get("JWT_SECRET", hashlib.sha256(os.urandom(64)).hexdigest()[:64])
 
 def _pg_sql(sql):
