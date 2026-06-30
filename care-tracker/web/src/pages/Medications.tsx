@@ -21,7 +21,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Pill, Plus, CheckCircle2, XCircle, Sparkles, Info, Pencil, Trash2 } from 'lucide-react';
+import { Pill, Plus, CheckCircle2, XCircle, Sparkles, Info, Trash2, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import {
   Dialog,
@@ -132,6 +132,8 @@ export default function Medications() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [newMedForm, setNewMedForm] = useState<NewMedForm>(EMPTY_NEW_MED);
   const [deactivateTarget, setDeactivateTarget] = useState<Medication | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -217,6 +219,13 @@ export default function Medications() {
   function formatDate(ts: string) { return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
 
   const grouped = (medications ?? []).reduce((acc, med) => { const cat = categorize(med.purpose); if (!acc[cat]) acc[cat] = []; acc[cat].push(med); return acc; }, {} as Record<string, Medication[]>);
+
+  const searchResults = searchQuery.trim()
+    ? (medications ?? []).filter(m =>
+        m.drug.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (m.purpose || '').toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : null;
 
   return (
     <div className="space-y-6">
@@ -312,15 +321,110 @@ export default function Medications() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="flex items-center gap-2"><Pill className="h-5 w-5 text-muted-foreground" /><CardTitle className="text-base">Schedule</CardTitle></div>
             <div className="flex items-center gap-1">
-              {[{ label: 'All', value: undefined }, { label: 'Active', value: 1 }, { label: 'Inactive', value: 0 }].map((f) => (
+              {!searchOpen && [{ label: 'All', value: undefined }, { label: 'Active', value: 1 }, { label: 'Inactive', value: 0 }].map((f) => (
                 <Button key={f.label} variant={filterActive === f.value ? 'secondary' : 'ghost'} size="sm" className="min-h-[44px] px-3" onClick={() => setFilterActive(f.value as number | undefined)}>{f.label}</Button>
               ))}
+              <Button
+                variant={searchOpen ? 'secondary' : 'ghost'}
+                size="icon"
+                className="min-h-[44px] min-w-[44px]"
+                onClick={() => { setSearchOpen(o => !o); setSearchQuery(''); setSelectedMedId(null); }}
+                title="Search medications"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
             </div>
           </div>
+          {searchOpen && (
+            <div className="relative mt-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                autoFocus
+                placeholder="Search medications by name or purpose..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-9"
+              />
+              {searchQuery && (
+                <button
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted"
+                  onClick={() => setSearchQuery('')}
+                >
+                  <XCircle className="h-4 w-4 text-muted-foreground" />
+                </button>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {medications === null ? <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
-          : medications.length === 0 ? <p className="text-sm text-muted-foreground py-4 text-center">No medications found.</p>
+          : searchResults !== null ? (
+            /* ---- Search results ---- */
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">{searchResults.length} result{searchResults.length !== 1 ? 's' : ''}</p>
+              {searchResults.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">No medications match your search.</p>
+              ) : (
+                searchResults.map((med) => {
+                  const isOpen = selectedMedId === med.id;
+                  return (
+                    <div key={med.id} className="border rounded-xl overflow-hidden">
+                      <div
+                        className="flex items-center justify-between p-3 cursor-pointer hover:bg-accent/10"
+                        onClick={() => setSelectedMedId(isOpen ? null : med.id)}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm">{med.drug}</span>
+                            <span className="text-xs text-muted-foreground">{med.dose}</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); sendMessage(`what is ${med.drug}?`); }}
+                              className="p-1 min-h-[32px] min-w-[32px] flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-primary"
+                              title={`Ask about ${med.drug}`}
+                            >
+                              <Sparkles className="h-3 w-3" />
+                            </button>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">{med.schedule || '—'} &middot; {med.purpose || '—'}</p>
+                          {med.description && <p className="text-xs text-muted-foreground mt-0.5 max-w-[400px] leading-relaxed">{med.description}</p>}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-3">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeactivate(med); }}
+                            className="cursor-pointer min-h-[36px] inline-flex items-center"
+                          >
+                            {med.active === 1
+                              ? <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" />Active</Badge>
+                              : <Badge variant="outline" className="gap-1"><XCircle className="h-3 w-3" />Inactive</Badge>}
+                          </button>
+                          {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        </div>
+                      </div>
+                      {isOpen && (
+                        <div className="border-t p-3 bg-muted/20">
+                          <p className="text-xs font-semibold mb-2">Recent Doses</p>
+                          {medLog === null
+                            ? <div className="space-y-1">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-6 w-full" />)}</div>
+                            : medLog.length === 0
+                              ? <p className="text-xs text-muted-foreground">No dose history.</p>
+                              : <div className="overflow-x-auto"><Table>
+                                  <TableHeader><TableRow><TableHead>Status</TableHead><TableHead>Scheduled</TableHead><TableHead>Taken</TableHead></TableRow></TableHeader>
+                                  <TableBody>{medLog.map((log) => (
+                                    <TableRow key={log.id}>
+                                      <TableCell><Badge variant={STATUS_VARIANT[log.status] ?? 'outline'}>{log.status}</Badge></TableCell>
+                                      <TableCell className="text-xs">{formatDate(log.scheduled_for)}</TableCell>
+                                      <TableCell className="text-xs">{log.taken_at ? formatDate(log.taken_at) : '—'}</TableCell>
+                                    </TableRow>
+                                  ))}</TableBody>
+                                </Table></div>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          ) : medications.length === 0 ? <p className="text-sm text-muted-foreground py-4 text-center">No medications found.</p>
           : <div className="space-y-8">
               {computeCategoryOrder(medications).map((category) => {
                 const medsInCat = grouped[category];
@@ -335,7 +439,6 @@ export default function Medications() {
                         const isEditing = editingId === med.id;
                         return (
                           <div key={med.id} className="border rounded-xl overflow-hidden">
-                            {/* Header */}
                             <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-accent/10" onClick={() => setSelectedMedId(selectedMedId === med.id ? null : med.id)}>
                               <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <button onClick={(e) => { e.stopPropagation(); sendMessage(`what is ${med.drug}?`); }} className="p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-primary shrink-0" title={`Ask about ${med.drug}`}><Sparkles className="h-3.5 w-3.5" /></button>
@@ -349,8 +452,6 @@ export default function Medications() {
                                 {med.active === 1 ? <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" />Active</Badge> : <Badge variant="outline" className="gap-1"><XCircle className="h-3 w-3" />Inactive</Badge>}
                               </button>
                             </div>
-
-                            {/* Detail rows */}
                             <div className="border-t px-3 py-2 space-y-1.5 bg-muted/20">
                               {(['dose', 'route', 'schedule', 'purpose'] as EditableField[]).map((field) => {
                                 const current = med[field] ?? '';
@@ -431,7 +532,7 @@ export default function Medications() {
                                 </button>
                               </TableCell>
                               <TableCell onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" onClick={(e) => { e.stopPropagation(); handleDeactivate(med); }} title={med.active ? 'Deactivate' : 'Reactivate'}><Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" /></Button>
+                                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" onClick={(e) => { e.stopPropagation(); handleDeactivate(med); }} title={med.active ? 'Deactivate' : 'Reactivate'}><Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" /></Button>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -445,7 +546,7 @@ export default function Medications() {
           {errors.medications && <p className="text-sm text-destructive mt-2">{errors.medications}</p>}
           {errors.save && <p className="text-sm text-destructive mt-2">{errors.save}</p>}
 
-          {selectedMedId !== null && (
+          {!searchResults && selectedMedId !== null && (
             <>
               <Separator className="my-4" />
               <div>

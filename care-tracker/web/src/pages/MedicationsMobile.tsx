@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Pill, Plus, CheckCircle2, XCircle, Sparkles, ChevronDown, ChevronUp, Info, HeartPulse, Heart, Droplets, Syringe, Zap, SprayCan, Paintbrush, Wind, Leaf, Bandage, ClipboardList, X, Scissors, Utensils } from 'lucide-react'
+import { Pill, Plus, CheckCircle2, XCircle, Sparkles, ChevronDown, ChevronUp, Info, HeartPulse, Heart, Droplets, Syringe, Zap, SprayCan, Paintbrush, Wind, Leaf, Bandage, ClipboardList, X, Scissors, Utensils, Search } from 'lucide-react'
 import { fetchMedications, createMedication, updateMedication } from '@/api'
 import type { Medication } from '@/api'
 import { useChatContext } from '@/context/ChatContext'
@@ -73,6 +73,8 @@ export default function MedicationsMobile() {
   const [inactiveOpen, setInactiveOpen] = useState(false)
   const [autoExpanded, setAutoExpanded] = useState<Set<number>>(new Set())
   const [addOpen, setAddOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [form, setForm] = useState({ drug: '', dose: '', schedule: '', purpose: '', description: '' })
   const [submitting, setSubmitting] = useState(false)
   const { sendMessage } = useChatContext()
@@ -106,6 +108,10 @@ export default function MedicationsMobile() {
     load()
   }
 
+  function toggleExpanded(id: number) {
+    setExpanded(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next })
+  }
+
   const grouped: Record<string, Medication[]> = {}
   for (const m of meds || []) {
     const cat = categorize(m.purpose)
@@ -130,18 +136,133 @@ export default function MedicationsMobile() {
   const totalActive = displayOrder.reduce((sum, cat) => sum + (activeByCat[cat]?.length || 0), 0)
   const filteredMedsCount = selectedCat ? (activeByCat[selectedCat]?.length || 0) : totalActive
 
+  const searchResults = searchQuery.trim()
+    ? (meds || []).filter(m =>
+        m.drug.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (m.purpose || '').toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : null
+
+  function renderMedCard(med: Medication) {
+    const isExp = expanded.has(med.id)
+    return (
+      <Card key={med.id} className={cn('border rounded-xl', med.active === 0 && 'opacity-60')}>
+        <CardContent className="p-0">
+          <button
+            className="w-full p-4 text-left flex items-start justify-between gap-3"
+            onClick={() => toggleExpanded(med.id)}
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-sm">{med.drug}</span>
+                {med.active === 0 && <span className="text-[10px] text-muted-foreground">(inactive)</span>}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">{med.dose} &middot; {med.schedule || '—'}</p>
+              {med.purpose && <p className="text-[11px] text-muted-foreground mt-0.5 italic">{med.purpose}</p>}
+            </div>
+            {isExp
+              ? <ChevronUp className="h-5 w-5 text-muted-foreground shrink-0 mt-1" />
+              : <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0 mt-1" />}
+          </button>
+          {isExp && (
+            <div className="px-4 pb-4 space-y-3 border-t pt-3">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div><span className="text-xs text-muted-foreground">Route</span><p>{med.route || '—'}</p></div>
+                <div><span className="text-xs text-muted-foreground">Purpose</span><p className="truncate">{med.purpose || '—'}</p></div>
+              </div>
+              {med.description && (
+                <div className="bg-muted/50 rounded-lg p-2.5 flex items-start gap-2">
+                  <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted-foreground">{med.description}</p>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline" size="sm" className="flex-1 min-h-[44px]"
+                  onClick={() => sendMessage(`what is ${med.drug}? what does it treat and what are its side effects?`)}
+                >
+                  <Sparkles className="h-4 w-4 mr-1" />Ask AI
+                </Button>
+                <Button
+                  variant={med.active === 1 ? 'destructive' : 'default'}
+                  size="sm" className="flex-1 min-h-[44px]"
+                  onClick={() => toggleActive(med)}
+                >
+                  {med.active === 1
+                    ? <><XCircle className="h-4 w-4 mr-1" />Deactivate</>
+                    : <><CheckCircle2 className="h-4 w-4 mr-1" />Reactivate</>}
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Medications</h1>
-        <Button size="sm" className="min-h-[44px]" onClick={() => setAddOpen(true)}>
-          <Plus className="h-5 w-5" />
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button
+            size="sm"
+            variant={searchOpen ? 'secondary' : 'ghost'}
+            className="min-h-[44px] min-w-[44px] px-0"
+            onClick={() => { setSearchOpen(o => !o); setSearchQuery('') }}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+          <Button size="sm" className="min-h-[44px]" onClick={() => setAddOpen(true)}>
+            <Plus className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
+
+      {/* Search Input */}
+      {searchOpen && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            autoFocus
+            placeholder="Search medications..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9 h-11"
+          />
+          {searchQuery && (
+            <button
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted"
+              onClick={() => setSearchQuery('')}
+            >
+              <X className="h-4 w-4 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+      )}
 
       {meds === null ? (
         <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}</div>
+      ) : searchResults !== null ? (
+        /* ---- Search results view (decluttered) ---- */
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground px-1">
+            {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+          </p>
+          {searchResults.length === 0 ? (
+            <Card className="rounded-xl">
+              <CardContent className="p-8 text-center">
+                <Search className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No medications match your search.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            searchResults.map(med => renderMedCard(med))
+          )}
+        </div>
       ) : (
+        /* ---- Normal grouped view ---- */
         <>
           {totalActive > 0 && (
             <>
@@ -256,75 +377,7 @@ export default function MedicationsMobile() {
             return (
               <div key={cat} className="space-y-2">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">{cat}</h3>
-                {items.map(med => {
-                  const isExpanded = expanded.has(med.id)
-                  return (
-                    <Card key={med.id} className="border rounded-xl">
-                      <CardContent className="p-0">
-                        <button
-                          className="w-full p-4 text-left flex items-start justify-between gap-3"
-                          onClick={() => {
-                            setExpanded(prev => {
-                              const next = new Set(prev)
-                              if (isExpanded) next.delete(med.id); else next.add(med.id)
-                              return next
-                            })
-                          }}
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">{med.drug}</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {med.dose} &middot; {med.schedule || '—'}
-                            </p>
-                            {med.purpose && (
-                              <p className="text-[11px] text-muted-foreground mt-0.5 italic">{med.purpose}</p>
-                            )}
-                          </div>
-                          {isExpanded ? (
-                            <ChevronUp className="h-5 w-5 text-muted-foreground shrink-0 mt-1" />
-                          ) : (
-                            <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0 mt-1" />
-                          )}
-                        </button>
-                        {isExpanded && (
-                          <div className="px-4 pb-4 space-y-3 border-t pt-3">
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div><span className="text-xs text-muted-foreground">Route</span><p>{med.route || '—'}</p></div>
-                              <div><span className="text-xs text-muted-foreground">Purpose</span><p className="truncate">{med.purpose || '—'}</p></div>
-                            </div>
-                            {med.description && (
-                              <div className="bg-muted/50 rounded-lg p-2.5 flex items-start gap-2">
-                                <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                                <p className="text-xs text-muted-foreground">{med.description}</p>
-                              </div>
-                            )}
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline" size="sm" className="flex-1 min-h-[44px]"
-                                onClick={() => sendMessage(`what is ${med.drug}? what does it treat and what are its side effects?`)}
-                              >
-                                <Sparkles className="h-4 w-4 mr-1" />Ask AI
-                              </Button>
-                              <Button
-                                variant={med.active === 1 ? 'destructive' : 'default'}
-                                size="sm" className="flex-1 min-h-[44px]"
-                                onClick={() => toggleActive(med)}
-                              >
-                                {med.active === 1 ? (
-                                  <><XCircle className="h-4 w-4 mr-1" />Deactivate</>
-                                ) : (
-                                  <><CheckCircle2 className="h-4 w-4 mr-1" />Reactivate</>
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )
-                })}
+                {items.map(med => renderMedCard(med))}
               </div>
             )
           })}
@@ -332,7 +385,7 @@ export default function MedicationsMobile() {
         </>
       )}
 
-      {inactiveMeds.length > 0 && (
+      {!searchResults && inactiveMeds.length > 0 && (
         <div className="mt-4">
           <button
             onClick={() => setInactiveOpen(o => !o)}
@@ -369,7 +422,7 @@ export default function MedicationsMobile() {
         </div>
       )}
 
-      {meds?.length === 0 && (
+      {meds?.length === 0 && !searchResults && (
         <Card className="rounded-xl"><CardContent className="p-8 text-center"><Pill className="h-8 w-8 text-muted-foreground mx-auto mb-2" /><p className="text-sm text-muted-foreground">No medications yet.</p></CardContent></Card>
       )}
 
