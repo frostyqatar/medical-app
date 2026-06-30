@@ -49,8 +49,11 @@ import { fetchLabs, fetchLabTests, fetchLabTrend, createLab, deleteLab, updateLa
 import type { Lab } from '@/api';
 
 const LAB_DESCRIPTIONS: Record<string, string> = {
+  // ── Diabetes / Glucose
   "HbA1c":
-    "Average blood sugar over 2–3 months. Key diabetes control marker — measures glycated hemoglobin.",
+    "Average blood sugar over 2–3 months. Key diabetes control marker — measures glycated hemoglobin. Target for diabetics: <7.0%.",
+  "eAG (estimated avg glucose)":
+    "Estimated average glucose derived from HbA1c (28.7 x HbA1c - 46.7). Reflects average daily blood sugar in familiar mg/dL units.",
   "Glucose (fasting)":
     "Fasting blood glucose level (8+ hours without food). Indicates baseline blood sugar control; used to screen for and monitor diabetes.",
   "Glucose (pre_meal)":
@@ -63,28 +66,114 @@ const LAB_DESCRIPTIONS: Record<string, string> = {
     "Blood glucose before sleep. Helps prevent nocturnal hypo- or hyperglycemia.",
   "Glucose (unknown)":
     "Blood glucose reading. Used to monitor diabetes control across different times of day.",
-  "Albumin":
-    "Protein produced by the liver. Reflects nutritional status, liver function, and can flag chronic illness or malnutrition.",
+
+  // ── Inflammation / Infection
+  "CRP":
+    "C-reactive protein. Acute-phase reactant; rises rapidly with infection, tissue injury, or inflammation. >100 suggests severe bacterial infection or major tissue damage.",
   "CRP (hs)":
-    "High-sensitivity C-reactive protein. Measures low-grade inflammation; elevated in infection, inflammation, and cardiovascular risk.",
+    "High-sensitivity C-reactive protein. Measures low-grade chronic inflammation; used for cardiovascular risk assessment (the lower the better).",
   "WBC":
-    "White blood cell count. Indicates immune activity; elevated during infection, inflammation, or stress.",
-  "Creatinine":
-    "Waste product from muscle breakdown. Filtered by kidneys; a key marker of kidney function.",
-  "eGFR":
-    "Estimated glomerular filtration rate. Calculated from creatinine, age, and sex — indicates how well kidneys filter blood.",
+    "White blood cell count. Key immune marker — elevated in infection, inflammation, stress, or leukemia; low in bone marrow suppression or severe sepsis.",
+
+  // ── Nutrition / Liver
+  "Albumin":
+    "Major protein made by the liver. Reflects nutritional status and liver synthetic function. Low in malnutrition, chronic illness, liver disease, or severe inflammation.",
+
+  // ── Hematology — CBC
   "Hemoglobin":
-    "Oxygen-carrying protein in red blood cells. Low levels indicate anemia; can be a sign of bleeding, malnutrition, or chronic disease.",
+    "Oxygen-carrying protein in red blood cells. Low = anemia (bleeding, iron/B12/folate deficiency, chronic disease); high = dehydration, smoking, polycythemia.",
+  "Hematocrit":
+    "Percentage of blood volume that is red blood cells. Tracks with hemoglobin — low in anemia, high in dehydration.",
+  "RBC":
+    "Red blood cell count. Low suggests anemia; high may indicate dehydration, smoking, or bone marrow disorder.",
+  "MCV":
+    "Mean corpuscular volume — average RBC size. Low (<80 fL): iron deficiency, thalassemia. High (>95 fL): B12 or folate deficiency, alcohol.",
+  "RBC Morphology":
+    "Microscopic examination of RBC shape and size. Microcytes = small cells (often iron deficiency). Macrocytes = large cells (often B12/folate). Poikilocytosis = abnormal shapes.",
+  "RDW":
+    "Red cell distribution width — variation in RBC size. Elevated in early iron deficiency (before anemia develops), mixed anemias, or recent transfusion.",
+  "Platelet count":
+    "Number of platelets (thrombocytes). Essential for blood clotting. Low = bleeding risk; high = thrombosis risk or reactive to inflammation/iron deficiency.",
+  "Neutrophil %":
+    "Percentage of WBCs that are neutrophils — the first-responder immune cells. Elevated in acute bacterial infection, stress, inflammation, or corticosteroid use.",
+  "Lymphocyte %":
+    "Percentage of WBCs that are lymphocytes — key to viral defense and immune memory. Elevated in viral infections; low in stress, steroids, or immunodeficiency.",
+  "Monocyte %":
+    "Percentage of WBCs that are monocytes — clean-up cells. Elevated in chronic infections, inflammatory conditions, or recovery from acute infection.",
+
+  // ── Kidney Function
+  "Creatinine":
+    "Waste product from muscle metabolism. Filtered by kidneys — rising creatinine signals worsening kidney function.",
+  "eGFR":
+    "Estimated glomerular filtration rate — calculated from creatinine, age, and sex. The best single number for kidney function. >90 is normal; <60 for 3+ months = CKD.",
+  "BUN":
+    "Blood urea nitrogen — waste product from protein breakdown. Elevated in dehydration, high protein intake, kidney impairment, or GI bleeding.",
+
+  // ── Electrolytes & Minerals
+  "Sodium":
+    "Major blood electrolyte. Controls fluid balance. Abnormal levels cause neurological symptoms — confusion, seizures, coma.",
+  "Potassium":
+    "Critical intracellular electrolyte. Affects heart rhythm and muscle function. Both high and low can be life-threatening.",
+  "Chloride":
+    "Major anion in blood. Moves with sodium; helps maintain acid-base balance. Abnormal levels often reflect fluid or acid-base disorders.",
+  "CO2":
+    "Serum bicarbonate — reflects the body's acid-base buffer system. Low in metabolic acidosis (DKA, kidney disease); high in metabolic alkalosis (vomiting, diuretics).",
+  "Phosphorus":
+    "Mineral essential for bones, teeth, and energy (ATP). Elevated in kidney disease; low in malnutrition, refeeding syndrome, or certain medications.",
+  "Magnesium":
+    "Mineral critical for nerve and muscle function, heart rhythm, and bone health. Low causes muscle cramps, arrhythmias; common in diabetes and malnutrition.",
+
+  // ── Lipids (Cholesterol Panel)
+  "Total Cholesterol":
+    "Sum of LDL + HDL + 20% of triglycerides. Overall measure of blood cholesterol; goal <200 mg/dL for general population.",
   "Total cholesterol":
-    "Combined LDL + HDL + 20% triglycerides. Overall measure of blood cholesterol; elevated levels increase cardiovascular risk.",
+    "Sum of LDL + HDL + 20% of triglycerides. Overall measure of blood cholesterol; goal <200 mg/dL for general population.",
   "LDL":
-    "Low-density lipoprotein ('bad' cholesterol). Carries cholesterol to arteries; high levels promote plaque buildup and vascular disease.",
-  "Triglycerides":
-    "Type of fat stored in the blood. Elevated in diabetes, obesity, metabolic syndrome, and cardiovascular disease.",
+    "Low-density lipoprotein ('bad' cholesterol). Delivers cholesterol to tissues and arteries — main driver of atherosclerosis. Goal <130, ideally <100.",
   "HDL":
-    "High-density lipoprotein ('good' cholesterol). Removes excess cholesterol from arteries; higher levels are protective.",
+    "High-density lipoprotein ('good' cholesterol). Reverse cholesterol transport — removes excess cholesterol from arteries. Higher is protective; target >50 for women, >40 for men.",
+  "Triglycerides":
+    "Main form of stored fat in the body. Elevated in diabetes, obesity, metabolic syndrome, high-carb diet. Goal <150 mg/dL.",
+
+  // ── Vitamins
   "Vitamin D":
-    "Fat-soluble vitamin essential for bone health, calcium absorption, and immune function. Deficiency is common and correctable.",
+    "25-hydroxyvitamin D — best measure of vitamin D status. Essential for bone health, calcium absorption, and immune function. Deficiency (<30 ng/mL) is common and correctable.",
+  "Vitamin D (25-OH)":
+    "25-hydroxyvitamin D — best measure of vitamin D status. Essential for bone health, calcium absorption, and immune function. Deficiency (<30 ng/mL) is common and correctable.",
+
+  // ── Urinalysis
+  "Urine Appearance":
+    "Visual clarity of urine. Cloudy suggests infection (pyuria), crystals, or mucus. Normal is clear to slightly hazy.",
+  "Urine Specific Gravity":
+    "Urine concentration. Low (dilute) = excess fluid intake, diabetes insipidus, kidney disease. High (concentrated) = dehydration, SIADH, glucose/protein in urine.",
+  "Urine pH":
+    "Acidity of urine (4.5–8.5 normal). Low pH in high-protein diet or metabolic acidosis; high pH in UTI with urea-splitting bacteria or vegetarian diet.",
+  "Urine Protein":
+    "Protein in urine — should be negative or trace. Persistent protein suggests kidney damage (diabetic nephropathy, glomerular disease).",
+  "Urine Sugar":
+    "Glucose in urine — should be negative. Positive when blood glucose exceeds renal threshold (~180 mg/dL), indicating poor glycemic control.",
+  "Urine Blood":
+    "Blood in urine (hematuria). Can indicate UTI, kidney stones, trauma, glomerular disease, or menstruation. Always investigate unexplained hematuria.",
+  "Urine Nitrite":
+    "Screening test for bacteria that convert nitrate to nitrite (mostly gram-negative rods like E. coli). Positive strongly suggests UTI.",
+  "Urine Leucocytes":
+    "Leukocyte esterase — enzyme from white blood cells in urine. Positive suggests pyuria (WBCs) typically from UTI or inflammation.",
+  "Urine WBC":
+    "White blood cells seen under microscope (per high-power field). >5 WBC/HPF indicates urinary tract inflammation or infection.",
+  "Urine RBC":
+    "Red blood cells seen under microscope (per high-power field). >3 RBC/HPF suggests bleeding — UTI, stones, glomerular disease, or trauma.",
+  "Urine Epithelial cells":
+    "Squamous epithelial cells from the urethra/vagina. 0–5 is normal; elevated suggests contamination of specimen or urethral inflammation.",
+
+  // ── Informational / Tracking entries
+  "Albumin (NOT RETESTED)":
+    "Albumin was not retested on this date. Last known: 3.6 g/dL on 10 June (normal). Likely still within normal range. Recommend recheck at next visit.",
+  "CRP (NOT RETESTED)":
+    "CRP was not retested on this date. Last known: 8.38 mg/L on 10 June (near normal, down from 277 at admission). Would be useful to recheck to confirm inflammation fully resolved.",
+  "Vitamin D (NOT RETESTED)":
+    "Vitamin D was not retested on this date. Last known: 40 ng/mL on 10 June (normal, corrected from deficiency of 18). Routine recheck in a few months is advised.",
+  "Iron Studies / Ferritin (NEVER DONE)":
+    "*** IMPORTANT: These tests have never been performed. *** MCV dropped to 78 fL with microcytosis on 27 June — strongly suggests iron deficiency. Recommend: serum iron, ferritin, TIBC, and transferrin saturation at next visit.",
 };
 
 function formatDate(ts: string) {
@@ -171,14 +260,14 @@ export default function LabsPage() {
   const [editValue, setEditValue] = useState('');
   const [savingCell, setSavingCell] = useState(false);
 
-  const loadLabs = useCallback(async (test?: string) => {
-    setLabs(null);
+  const loadLabs = useCallback(async (test?: string, silent = false) => {
+    if (!silent) setLabs(null);
     try {
       const data = await fetchLabs(test);
       setLabs(data);
-      setError(null);
+      if (!silent) setError(null);
     } catch {
-      setError('Failed to load lab results');
+      if (!silent) setError('Failed to load lab results');
     }
   }, []);
 
@@ -267,7 +356,7 @@ export default function LabsPage() {
     try {
       await deleteLab(deleteTarget.id);
       setDeleteTarget(null);
-      loadLabs(selectedTest === '__all__' ? undefined : selectedTest);
+      loadLabs(selectedTest === '__all__' ? undefined : selectedTest, true);
       if (selectedTest !== '__all__') {
         fetchLabTrend(selectedTest)
           .then(setTrend)
@@ -289,7 +378,7 @@ export default function LabsPage() {
     setEditTest(null);
     setEditTrend(null);
     setEditingCell(null);
-    loadLabs(selectedTest === '__all__' ? undefined : selectedTest);
+    loadLabs(selectedTest === '__all__' ? undefined : selectedTest, true);
     if (selectedTest !== '__all__') fetchLabTrend(selectedTest).then(setTrend).catch(() => setTrend(null));
   }
 
@@ -520,7 +609,7 @@ export default function LabsPage() {
                       <TableHead>Flag</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead className="hidden sm:table-cell">Trend</TableHead>
-                      {!isAll && <TableHead className="w-10" />}
+                      <TableHead className="w-10"><span className="sr-only">Delete</span></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -644,11 +733,9 @@ export default function LabsPage() {
                                 </span>
                               )}
                             </TableCell>
-                            {!isAll && (
-                              <TableCell>
-                                <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground hover:text-red-500" onClick={() => setDeleteTarget(lab)} title="Delete this reading"><Trash2 className="h-4 w-4" /></Button>
-                              </TableCell>
-                            )}
+                            <TableCell>
+                              <Button variant="ghost" size="icon" className="h-10 w-10 min-h-[40px] min-w-[40px] text-muted-foreground hover:text-red-500" onClick={() => setDeleteTarget(lab)} title="Delete this reading"><Trash2 className="h-4 w-4" /></Button>
+                            </TableCell>
                           </TableRow>
                         );
                       })}

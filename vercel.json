@@ -1,0 +1,9 @@
+{
+  "framework": null,
+  "buildCommand": "cd care-tracker/web && npm ci && npm run build",
+  "outputDirectory": "care-tracker/web/dist",
+  "installCommand": "cd care-tracker/web && npm ci",
+  "rewrites": [
+    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+  ]
+}

@@ -16,7 +16,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { fetchPatient } from '@/api';
+import { fetchPatient, fetchExport } from '@/api';
 import { useAuth } from '@/context/AuthContext';
 import type { Patient } from '@/api';
 
@@ -34,8 +34,23 @@ const NAV_ITEMS = [
   { to: '/emergency', label: 'Emergency', icon: AlertTriangle },
 ];
 
+function handleExport() {
+  fetchExport()
+    .then((res) => res.blob())
+    .then((blob) => {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'patient-export.json'
+      a.click()
+      URL.revokeObjectURL(url)
+    })
+    .catch((err) => console.error('Export failed:', err))
+}
+
 function Sidebar() {
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [exporting, setExporting] = useState(false);
   const { logout } = useAuth();
 
   useEffect(() => {
@@ -79,14 +94,14 @@ function Sidebar() {
           <LogOut className="h-4 w-4" />
           Sign Out
         </button>
-        <a
-          href="/api/export/"
-          download="care-tracker-export.json"
-          className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors min-h-[44px]"
+        <button
+          onClick={() => { setExporting(true); handleExport(); setTimeout(() => setExporting(false), 1000); }}
+          disabled={exporting}
+          className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors min-h-[44px] w-full"
         >
           <Download className="h-3.5 w-3.5" />
-          Export Data
-        </a>
+          {exporting ? 'Exporting...' : 'Export Data'}
+        </button>
         <div className="space-y-1">
           <div className="text-sm font-medium">{patient?.id ?? 'PT-ANON'}</div>
           {patient && (
@@ -107,6 +122,7 @@ function Sidebar() {
 
 function MobileNav() {
   const { logout } = useAuth();
+  const [exporting, setExporting] = useState(false);
 
   return (
     <nav
@@ -131,14 +147,14 @@ function MobileNav() {
             <span className="truncate max-w-[60px] text-center leading-tight">{item.label}</span>
           </NavLink>
         ))}
-        <a
-          href="/api/export/"
-          download="care-tracker-export.json"
+        <button
+          onClick={() => { setExporting(true); handleExport(); setTimeout(() => setExporting(false), 1000); }}
+          disabled={exporting}
           className="flex flex-col items-center justify-center gap-0.5 min-w-[64px] min-h-[52px] px-2 py-1.5 text-[11px] font-medium text-muted-foreground shrink-0 snap-start"
         >
           <Download className="h-5 w-5" />
-          <span className="truncate max-w-[60px] text-center leading-tight">Export</span>
-        </a>
+          <span className="truncate max-w-[60px] text-center leading-tight">{exporting ? '...' : 'Export'}</span>
+        </button>
         <button
           onClick={logout}
           className="flex flex-col items-center justify-center gap-0.5 min-w-[64px] min-h-[52px] px-2 py-1.5 text-[11px] font-medium text-muted-foreground shrink-0 snap-start"
