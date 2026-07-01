@@ -245,7 +245,7 @@ export default function Medications() {
               <Progress value={overallAdherence} className="h-2.5" />
               <div className="grid grid-cols-3 gap-2 mt-1">
                 <div><span className="text-xs text-muted-foreground">Taken</span><p className="text-sm font-semibold tabular-nums text-green-600">{adherence.reduce((s, a) => s + a.taken_count, 0)}</p></div>
-                <div><span className="text-xs text-muted-foreground">Missed</span><p className="text-sm font-semibold tabular-nums text-red-600">{adherence.reduce((s, a) => s + a.missed_count, 0)}</p></div>
+                <div><span className="text-xs text-muted-foreground">Missed</span><p className="text-sm font-semibold tabular-nums text-destructive">{adherence.reduce((s, a) => s + a.missed_count, 0)}</p></div>
                 <div><span className="text-xs text-muted-foreground">Total Logs</span><p className="text-sm font-semibold tabular-nums">{adherence.reduce((s, a) => s + a.total_logs, 0)}</p></div>
               </div>
             </div>}
@@ -330,6 +330,8 @@ export default function Medications() {
                 className="min-h-[44px] min-w-[44px]"
                 onClick={() => { setSearchOpen(o => !o); setSearchQuery(''); setSelectedMedId(null); }}
                 title="Search medications"
+                aria-label={searchOpen ? 'Close search' : 'Search medications'}
+                aria-pressed={searchOpen}
               >
                 <Search className="h-4 w-4" />
               </Button>
@@ -341,6 +343,7 @@ export default function Medications() {
               <Input
                 autoFocus
                 placeholder="Search medications by name or purpose..."
+                aria-label="Search medications by name or purpose"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 pr-9"
@@ -349,6 +352,7 @@ export default function Medications() {
                 <button
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted"
                   onClick={() => setSearchQuery('')}
+                  aria-label="Clear search"
                 >
                   <XCircle className="h-4 w-4 text-muted-foreground" />
                 </button>
@@ -381,6 +385,7 @@ export default function Medications() {
                               onClick={(e) => { e.stopPropagation(); sendMessage(`what is ${med.drug}?`); }}
                               className="p-1 min-h-[32px] min-w-[32px] flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-primary"
                               title={`Ask about ${med.drug}`}
+                              aria-label={`Ask AI about ${med.drug}`}
                             >
                               <Sparkles className="h-3 w-3" />
                             </button>
@@ -441,7 +446,7 @@ export default function Medications() {
                           <div key={med.id} className="border rounded-xl overflow-hidden">
                             <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-accent/10" onClick={() => setSelectedMedId(selectedMedId === med.id ? null : med.id)}>
                               <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <button onClick={(e) => { e.stopPropagation(); sendMessage(`what is ${med.drug}?`); }} className="p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-primary shrink-0" title={`Ask about ${med.drug}`}><Sparkles className="h-3.5 w-3.5" /></button>
+                                <button onClick={(e) => { e.stopPropagation(); sendMessage(`what is ${med.drug}?`); }} className="p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-primary shrink-0" title={`Ask about ${med.drug}`} aria-label={`Ask AI about ${med.drug}`}><Sparkles className="h-3.5 w-3.5" /></button>
                                 {isEditing && editField === 'drug' ? (
                                   <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} onKeyDown={handleFieldKeyDown} autoFocus readOnly onFocus={(e: any) => e.target.removeAttribute('readOnly')} className="h-10 text-sm flex-1" autoComplete="off" name="med-edit-drug" onClick={(e) => e.stopPropagation()} />
                                 ) : (
@@ -506,7 +511,7 @@ export default function Medications() {
                                   <div>
                                     <div className="flex items-center gap-1.5">
                                       <span className="font-medium">{med.drug}</span>
-                                      <button onClick={(e) => { e.stopPropagation(); sendMessage(`what is ${med.drug}?`); }} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-primary" title={`Ask about ${med.drug}`}><Sparkles className="h-3 w-3" /></button>
+                                      <button onClick={(e) => { e.stopPropagation(); sendMessage(`what is ${med.drug}?`); }} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-primary" title={`Ask about ${med.drug}`} aria-label={`Ask AI about ${med.drug}`}><Sparkles className="h-3 w-3" /></button>
                                     </div>
                                     {med.description && <p className="text-xs text-muted-foreground mt-0.5 max-w-[200px] sm:max-w-[320px] whitespace-normal leading-relaxed">{med.description}</p>}
                                   </div>
@@ -532,7 +537,7 @@ export default function Medications() {
                                 </button>
                               </TableCell>
                               <TableCell onClick={(e) => e.stopPropagation()}>
-                                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" onClick={(e) => { e.stopPropagation(); handleDeactivate(med); }} title={med.active ? 'Deactivate' : 'Reactivate'}><Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" /></Button>
+                                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" onClick={(e) => { e.stopPropagation(); handleDeactivate(med); }} title={med.active ? 'Deactivate' : 'Reactivate'} aria-label={`${med.active ? 'Deactivate' : 'Reactivate'} ${med.drug}`}><Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" /></Button>
                               </TableCell>
                             </TableRow>
                           ))}
