@@ -8,6 +8,7 @@ import { Slider } from '@/components/ui/slider'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Stethoscope, X, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { fetchSymptoms, fetchSymptomTypes, createSymptom, deleteSymptom } from '@/api'
 import type { Symptom } from '@/api'
@@ -16,6 +17,7 @@ const COMMON_TYPES = ['phantom limb pain', 'left foot numbness', 'GERD/heartburn
 
 function formatDateTime(ts: string) { return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }
 function severityColor(v: number) { if (v <= 3) return 'bg-green-500'; if (v <= 6) return 'bg-amber-500'; return 'bg-red-500' }
+function severityLabel(v: number) { if (v <= 3) return 'Mild'; if (v <= 6) return 'Moderate'; return 'Severe' }
 
 export default function SymptomsMobile() {
   const [symptoms, setSymptoms] = useState<Symptom[] | null>(null)
@@ -27,6 +29,7 @@ export default function SymptomsMobile() {
   const [formType, setFormType] = useState('')
   const [formSeverity, setFormSeverity] = useState([5])
   const [formNotes, setFormNotes] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<Symptom | null>(null)
 
   const load = useCallback(async (days?: number, type?: string) => {
     setSymptoms(null)
@@ -45,6 +48,18 @@ export default function SymptomsMobile() {
       setFormType(''); setFormSeverity([5]); setFormNotes('')
       load(timeRange === 'all' ? undefined : Number(timeRange), selectedType === 'all' ? undefined : selectedType)
     } catch { setError('Failed to record') } finally { setSubmitting(false) }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    const target = deleteTarget
+    setDeleteTarget(null)
+    try {
+      await deleteSymptom(target.id)
+      load(timeRange === 'all' ? undefined : Number(timeRange), selectedType === 'all' ? undefined : selectedType)
+    } catch {
+      setError('Failed to delete symptom entry')
+    }
   }
 
   const filtered = symptoms ? [...symptoms].sort((a, b) => new Date(b.noted_at).getTime() - new Date(a.noted_at).getTime()) : null
@@ -126,8 +141,8 @@ export default function SymptomsMobile() {
                     {s.notes && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{s.notes}</p>}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <Badge variant={sv <= 6 ? 'secondary' : 'destructive'} className="text-xs">{sv}/10</Badge>
-                    <button onClick={async () => { await deleteSymptom(s.id); load(timeRange === 'all' ? undefined : Number(timeRange), selectedType === 'all' ? undefined : selectedType) }} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-red-500"><X className="h-4 w-4" /></button>
+                    <Badge variant={sv <= 6 ? 'secondary' : 'destructive'} className="text-xs">{sv}/10 {severityLabel(sv)}</Badge>
+                    <button onClick={() => setDeleteTarget(s)} aria-label={`Delete ${s.type} entry`} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
                   </div>
                 </div>
                 <div className="mt-2 h-1.5 w-full bg-muted rounded-full overflow-hidden"><div className={`h-full rounded-full ${severityColor(sv)}`} style={{ width: `${(sv / 10) * 100}%` }} /></div>
@@ -136,6 +151,22 @@ export default function SymptomsMobile() {
           })}
         </div>
       )}
+
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Symptom Entry</DialogTitle>
+            <DialogDescription>This will permanently delete this symptom entry. This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          {deleteTarget && (
+            <p className="text-sm font-medium py-2">{deleteTarget.type} &middot; {deleteTarget.severity}/10 &middot; {formatDateTime(deleteTarget.noted_at)}</p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" className="min-h-[44px]" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" className="min-h-[44px]" onClick={handleDelete}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
