@@ -74,12 +74,12 @@ export default function ActionItemsMobile() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Actions</h1>
-        <Button size="sm" className="min-h-[44px]" onClick={() => setAddOpen(true)}><Plus className="h-5 w-5" /></Button>
+        <Button size="sm" className="min-h-[44px]" onClick={() => setAddOpen(true)} aria-label="Add action item"><Plus className="h-5 w-5" /></Button>
       </div>
 
       {/* Column selector */}
       <div className="flex items-center gap-2">
-        <button onClick={() => setActiveCol(c => Math.max(0, c - 1))} disabled={activeCol === 0} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border disabled:opacity-30"><ChevronLeft className="h-5 w-5" /></button>
+        <button onClick={() => setActiveCol(c => Math.max(0, c - 1))} disabled={activeCol === 0} aria-label="Previous column" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border disabled:opacity-30"><ChevronLeft className="h-5 w-5" /></button>
         <div className="flex-1 flex gap-1">
           {COLUMNS.map((c, i) => {
             const count = colItems(c.key).length
@@ -87,6 +87,7 @@ export default function ActionItemsMobile() {
               <button
                 key={c.key}
                 onClick={() => setActiveCol(i)}
+                aria-pressed={i === activeCol}
                 className={cn(
                   'flex-1 py-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors min-h-[44px]',
                   i === activeCol ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
@@ -98,7 +99,7 @@ export default function ActionItemsMobile() {
             )
           })}
         </div>
-        <button onClick={() => setActiveCol(c => Math.min(COLUMNS.length - 1, c + 1))} disabled={activeCol === COLUMNS.length - 1} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border disabled:opacity-30"><ChevronRight className="h-5 w-5" /></button>
+        <button onClick={() => setActiveCol(c => Math.min(COLUMNS.length - 1, c + 1))} disabled={activeCol === COLUMNS.length - 1} aria-label="Next column" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border disabled:opacity-30"><ChevronRight className="h-5 w-5" /></button>
       </div>
 
       {items === null ? (
@@ -112,7 +113,7 @@ export default function ActionItemsMobile() {
               <div className="flex items-center gap-2 flex-wrap">
                 <PriorityBadge p={item.priority} />
                 {item.category && <Badge variant="outline" className="text-[10px]">{item.category}</Badge>}
-                <Button variant="ghost" size="icon" className="h-10 w-10 ml-auto text-muted-foreground hover:text-red-500" onClick={() => setDeleteTarget(item)}><Trash2 className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-10 w-10 ml-auto text-muted-foreground hover:text-destructive" onClick={() => setDeleteTarget(item)} aria-label="Delete action item"><Trash2 className="h-4 w-4" /></Button>
               </div>
 
               {editingId === item.id ? (
@@ -147,16 +148,16 @@ export default function ActionItemsMobile() {
                 <span className="text-[11px] text-muted-foreground">{formatDate(item.created_at)}</span>
                 <div className="flex gap-1">
                   {col.key === 'open' && (
-                    <Button size="sm" variant="ghost" className="h-10 w-10" onClick={() => handleMove(item.id, 'answered')}><ArrowRight className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="ghost" className="h-10 w-10" onClick={() => handleMove(item.id, 'answered')} aria-label="Move to Answered"><ArrowRight className="h-4 w-4" /></Button>
                   )}
                   {col.key === 'answered' && (
                     <>
-                      <Button size="sm" variant="ghost" className="h-10 w-10" onClick={() => handleMove(item.id, 'open')}><ArrowLeft className="h-4 w-4" /></Button>
-                      <Button size="sm" variant="ghost" className="h-10 w-10" onClick={() => handleMove(item.id, 'done')}><CheckCircle2 className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" className="h-10 w-10" onClick={() => handleMove(item.id, 'open')} aria-label="Move back to Open"><ArrowLeft className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" className="h-10 w-10" onClick={() => handleMove(item.id, 'done')} aria-label="Mark as Done"><CheckCircle2 className="h-4 w-4" /></Button>
                     </>
                   )}
                   {col.key === 'done' && (
-                    <Button size="sm" variant="ghost" className="h-10 w-10" onClick={() => handleMove(item.id, 'answered')}><ArrowLeft className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="ghost" className="h-10 w-10" onClick={() => handleMove(item.id, 'answered')} aria-label="Move back to Answered"><ArrowLeft className="h-4 w-4" /></Button>
                   )}
                 </div>
               </div>
