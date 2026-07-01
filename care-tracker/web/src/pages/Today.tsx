@@ -187,6 +187,7 @@ export default function Today() {
                     onClick={() => sendMessage(`what is ${med.drug}?`)}
                     className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary shrink-0"
                     title={`Ask about ${med.drug}`}
+                    aria-label={`Ask AI about ${med.drug}`}
                   >
                     <Sparkles className="h-3.5 w-3.5" />
                   </button>
