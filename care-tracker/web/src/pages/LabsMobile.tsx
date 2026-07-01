@@ -67,7 +67,16 @@ export default function LabsMobile() {
     } catch { setError('Failed to save') } finally { setSaving(false) }
   }
 
-  async function handleDelete() { if (!deleteTarget) return; await deleteLab(deleteTarget.id); setDeleteTarget(null); load(selectedTest === '__all__' ? undefined : selectedTest) }
+  async function handleDelete() {
+    if (!deleteTarget) return
+    try {
+      await deleteLab(deleteTarget.id)
+      setDeleteTarget(null)
+      load(selectedTest === '__all__' ? undefined : selectedTest)
+    } catch {
+      setError('Failed to delete lab result')
+    }
+  }
 
   const chartData = trend ? [...trend].sort((a, b) => new Date(a.measured_at).getTime() - new Date(b.measured_at).getTime()).map(v => ({ date: formatDate(v.measured_at), value: v.value })) : []
 
@@ -75,7 +84,7 @@ export default function LabsMobile() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Labs</h1>
-        <Button size="sm" className="min-h-[44px]" onClick={() => setShowForm(true)}><Plus className="h-5 w-5" /></Button>
+        <Button size="sm" className="min-h-[44px]" onClick={() => setShowForm(true)} aria-label="Add lab result"><Plus className="h-5 w-5" /></Button>
       </div>
 
       <Select value={selectedTest} onValueChange={setSelectedTest}>
@@ -106,7 +115,7 @@ export default function LabsMobile() {
                         <p className="text-xs text-muted-foreground">{latest.value != null ? latest.value : '—'}{latest.unit ? ` ${latest.unit}` : ''} &middot; {formatDate(latest.measured_at)}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={f.variant} className={f as any}>{f.label}</Badge>
+                        <Badge variant={f.variant} className={(f as any).className}>{f.label}</Badge>
                         {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                       </div>
                     </div>
@@ -132,7 +141,7 @@ export default function LabsMobile() {
                       })()}
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" className="min-h-[44px] flex-1" onClick={() => { setSelectedTest(test); setExpandedTest(null) }}>View Trend</Button>
-                        <Button variant="ghost" size="sm" className="min-h-[44px] text-red-500" onClick={() => setDeleteTarget(latest)}><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" className="min-h-[44px] text-destructive" onClick={() => setDeleteTarget(latest)} aria-label={`Delete ${test} reading`}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </div>
                   )}
@@ -219,7 +228,7 @@ export default function LabsMobile() {
                     <p className="font-bold text-lg">{lab.value != null ? lab.value : '—'}<span className="text-sm font-normal text-muted-foreground ml-1">{lab.unit}</span></p>
                     <p className="text-[11px] text-muted-foreground">Ref: {refRange(lab)}</p>
                     {lab.notes && <p className="text-xs text-muted-foreground mt-1">{lab.notes}</p>}
-                    <Button variant="ghost" size="sm" className="mt-2 text-red-500 min-h-[44px]" onClick={() => setDeleteTarget(lab)}><Trash2 className="h-4 w-4 mr-1" />Delete</Button>
+                    <Button variant="ghost" size="sm" className="mt-2 text-destructive min-h-[44px]" onClick={() => setDeleteTarget(lab)} aria-label={`Delete ${lab.test} reading`}><Trash2 className="h-4 w-4 mr-1" />Delete</Button>
                   </CardContent>
                 </Card>
               )
