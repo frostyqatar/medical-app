@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, X, ClipboardList, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { fetchPlans, createPlan, updatePlan, deletePlan } from '@/api';
+import { usePlans } from '@/hooks/usePlans';
 import type { Plan } from '@/api';
 
 const COLORS = [
@@ -44,8 +44,7 @@ function getColorStyle(color: string) {
 }
 
 export default function PlansPage() {
-  const [plans, setPlans] = useState<Plan[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { plans, error, create, update, remove } = usePlans();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formTitle, setFormTitle] = useState('');
   const [formContent, setFormContent] = useState('');
@@ -60,41 +59,22 @@ export default function PlansPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<Plan | null>(null);
 
-  useEffect(() => {
-    loadPlans();
-  }, []);
-
-  async function loadPlans() {
-    setPlans(null);
-    try {
-      const data = await fetchPlans();
-      setPlans(data);
-      setError(null);
-    } catch {
-      setError('Failed to load plans');
-    }
-  }
-
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!formTitle.trim()) return;
     setSubmitting(true);
-    try {
-      await createPlan({
-        title: formTitle.trim(),
-        content: formContent.trim() || undefined,
-        color: formColor,
-      });
+    const ok = await create({
+      title: formTitle.trim(),
+      content: formContent.trim() || undefined,
+      color: formColor,
+    });
+    if (ok) {
       setFormTitle('');
       setFormContent('');
       setFormColor('default');
       setDialogOpen(false);
-      loadPlans();
-    } catch {
-      setError('Failed to create plan');
-    } finally {
-      setSubmitting(false);
     }
+    setSubmitting(false);
   }
 
   function startEdit(plan: Plan) {
@@ -115,19 +95,13 @@ export default function PlansPage() {
     e.preventDefault();
     if (!editingPlan || !editTitle.trim()) return;
     setSavingId(editingPlan.id);
-    try {
-      await updatePlan(editingPlan.id, {
-        title: editTitle.trim(),
-        content: editContent.trim() || '',
-        color: editColor,
-      });
-      setEditingPlan(null);
-      loadPlans();
-    } catch {
-      setError('Failed to update plan');
-    } finally {
-      setSavingId(null);
-    }
+    const ok = await update(editingPlan.id, {
+      title: editTitle.trim(),
+      content: editContent.trim() || '',
+      color: editColor,
+    });
+    if (ok) setEditingPlan(null);
+    setSavingId(null);
   }
 
   function handleEditKeyDown(e: React.KeyboardEvent) {
@@ -139,13 +113,8 @@ export default function PlansPage() {
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    try {
-      await deletePlan(deleteTarget.id);
-      setDeleteTarget(null);
-      loadPlans();
-    } catch {
-      setError('Failed to delete plan');
-    }
+    const ok = await remove(deleteTarget.id);
+    if (ok) setDeleteTarget(null);
   }
 
   return (
