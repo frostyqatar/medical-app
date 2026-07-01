@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Activity, Heart, Thermometer, Scale, Waves, X, Pencil } from 'lucide-react';
 import {
   LineChart,
@@ -115,6 +115,7 @@ export default function VitalsPage() {
   const [range, setRange] = useState<number>(7);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Vital | null>(null);
 
   const [form, setForm] = useState({
     bp_sys: '',
@@ -220,7 +221,17 @@ export default function VitalsPage() {
     } catch { setError('Failed to update') } finally { setSubmitting(false) }
   }
 
-  async function handleDeleteVital(id: number) { await deleteVital(id); loadAll() }
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return
+    const target = deleteTarget
+    setDeleteTarget(null)
+    try {
+      await deleteVital(target.id)
+      loadAll()
+    } catch {
+      setError('Failed to delete vitals reading')
+    }
+  }
 
   const sorted = vitals ? [...vitals].sort((a, b) => new Date(b.measured_at).getTime() - new Date(a.measured_at).getTime()) : []
 
@@ -383,16 +394,15 @@ export default function VitalsPage() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => openEdit(latest)}
+                    aria-label="Edit latest vitals reading"
                     className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-primary/10 text-muted-foreground hover:text-primary shrink-0"
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={async () => {
-                      if (!window.confirm('Delete this vitals reading?')) return;
-                      await handleDeleteVital(latest.id);
-                    }}
-                    className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 shrink-0"
+                    onClick={() => setDeleteTarget(latest)}
+                    aria-label="Delete latest vitals reading"
+                    className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-red-50 text-muted-foreground hover:text-destructive shrink-0"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -649,8 +659,8 @@ export default function VitalsPage() {
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <span className="text-xs text-muted-foreground">{formatDateTime(v.measured_at)}</span>
                     <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={() => openEdit(v)} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-primary/10 text-muted-foreground hover:text-primary"><Pencil className="h-4 w-4" /></button>
-                      <button onClick={() => handleDeleteVital(v.id)} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><X className="h-4 w-4" /></button>
+                      <button onClick={() => openEdit(v)} aria-label={`Edit vitals reading from ${formatDateTime(v.measured_at)}`} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-primary/10 text-muted-foreground hover:text-primary"><Pencil className="h-4 w-4" /></button>
+                      <button onClick={() => setDeleteTarget(v)} aria-label={`Delete vitals reading from ${formatDateTime(v.measured_at)}`} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-red-50 text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-1 text-sm">
@@ -689,6 +699,20 @@ export default function VitalsPage() {
               </DialogFooter>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Vitals Reading</DialogTitle>
+            <DialogDescription>This will permanently delete this vitals reading. This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          {deleteTarget && <p className="text-sm font-medium py-2">{formatDateTime(deleteTarget.measured_at)}</p>}
+          <DialogFooter>
+            <Button variant="outline" className="min-h-[44px]" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" className="min-h-[44px]" onClick={handleConfirmDelete}>Delete</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
