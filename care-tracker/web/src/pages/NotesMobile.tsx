@@ -30,8 +30,26 @@ export default function NotesMobile() {
     try { await createGoodTracking({ note: formNote.trim(), created_at: new Date().toISOString() }); setFormNote(''); load(timeRange === 'all' ? undefined : Number(timeRange)) } catch { setError('Failed') } finally { setSubmitting(false) }
   }
 
-  async function handleSave(item: GoodTracking) { await updateGoodTracking(item.id, { note: editNote.trim() }); setEditingId(null); load(timeRange === 'all' ? undefined : Number(timeRange)) }
-  async function handleDelete() { if (!deleteTarget) return; await deleteGoodTracking(deleteTarget.id); setDeleteTarget(null); load(timeRange === 'all' ? undefined : Number(timeRange)) }
+  async function handleSave(item: GoodTracking) {
+    try {
+      await updateGoodTracking(item.id, { note: editNote.trim() })
+      setEditingId(null)
+      load(timeRange === 'all' ? undefined : Number(timeRange))
+    } catch {
+      setError('Failed to save note')
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    try {
+      await deleteGoodTracking(deleteTarget.id)
+      setDeleteTarget(null)
+      load(timeRange === 'all' ? undefined : Number(timeRange))
+    } catch {
+      setError('Failed to delete note')
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -76,7 +94,7 @@ export default function NotesMobile() {
                     <p className="text-sm whitespace-pre-wrap">{item.note}</p>
                     <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1"><Clock className="h-3 w-3" />{formatDate(item.created_at)}</p>
                   </div>
-                  <button onClick={() => setDeleteTarget(item)} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-red-500 shrink-0"><X className="h-4 w-4" /></button>
+                  <button onClick={() => setDeleteTarget(item)} aria-label="Delete note" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-destructive shrink-0"><X className="h-4 w-4" /></button>
                 </div>
               )}
             </CardContent></Card>
