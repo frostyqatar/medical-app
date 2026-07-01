@@ -211,10 +211,12 @@ export default function MedicationsMobile() {
             variant={searchOpen ? 'secondary' : 'ghost'}
             className="min-h-[44px] min-w-[44px] px-0"
             onClick={() => { setSearchOpen(o => !o); setSearchQuery('') }}
+            aria-label={searchOpen ? 'Close search' : 'Search medications'}
+            aria-pressed={searchOpen}
           >
             <Search className="h-4 w-4" />
           </Button>
-          <Button size="sm" className="min-h-[44px]" onClick={() => setAddOpen(true)}>
+          <Button size="sm" className="min-h-[44px]" onClick={() => setAddOpen(true)} aria-label="Add medication">
             <Plus className="h-5 w-5" />
           </Button>
         </div>
@@ -227,6 +229,7 @@ export default function MedicationsMobile() {
           <Input
             autoFocus
             placeholder="Search medications..."
+            aria-label="Search medications"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="pl-9 pr-9 h-11"
@@ -235,6 +238,7 @@ export default function MedicationsMobile() {
             <button
               className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted"
               onClick={() => setSearchQuery('')}
+              aria-label="Clear search"
             >
               <X className="h-4 w-4 text-muted-foreground" />
             </button>
@@ -293,6 +297,7 @@ export default function MedicationsMobile() {
                         setAutoExpanded(new Set(catMeds))
                       }
                     }}
+                    aria-pressed={isSelected}
                     className={cn(
                       'rounded-xl overflow-hidden text-center transition-all active:scale-95',
                       isSelected
@@ -325,6 +330,7 @@ export default function MedicationsMobile() {
                     })
                     setAutoExpanded(new Set())
                   }}
+                  aria-label={`Clear ${selectedCat} filter`}
                   className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
                 >
                   <X className="h-4 w-4 text-muted-foreground" />
@@ -410,7 +416,7 @@ export default function MedicationsMobile() {
                       <Button variant="outline" size="sm" className="min-h-[44px] flex-1" onClick={() => toggleActive(med)}>
                         <CheckCircle2 className="h-4 w-4 mr-1" />Reactivate
                       </Button>
-                      <Button variant="ghost" size="sm" className="min-h-[44px]" onClick={() => sendMessage(`what is ${med.drug}?`)}>
+                      <Button variant="ghost" size="sm" className="min-h-[44px]" onClick={() => sendMessage(`what is ${med.drug}?`)} aria-label={`Ask AI about ${med.drug}`}>
                         <Sparkles className="h-4 w-4" />
                       </Button>
                     </div>
