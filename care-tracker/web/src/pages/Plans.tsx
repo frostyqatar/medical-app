@@ -139,9 +139,13 @@ export default function PlansPage() {
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    await deletePlan(deleteTarget.id);
-    setDeleteTarget(null);
-    loadPlans();
+    try {
+      await deletePlan(deleteTarget.id);
+      setDeleteTarget(null);
+      loadPlans();
+    } catch {
+      setError('Failed to delete plan');
+    }
   }
 
   return (
@@ -317,6 +321,7 @@ export default function PlansPage() {
                       e.stopPropagation();
                       setDeleteTarget(plan);
                     }}
+                    aria-label={`Delete plan "${plan.title}"`}
                     className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-black/10 text-muted-foreground hover:text-red-500 shrink-0"
                   >
                     <X className="h-4 w-4" />
