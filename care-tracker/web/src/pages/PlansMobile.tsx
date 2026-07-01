@@ -47,13 +47,22 @@ export default function PlansMobile() {
     try { await updatePlan(plan.id, { title: editF.title.trim(), content: editF.content.trim() || '', color: editF.color }); setEditing(null); load() } catch { setError('Failed') } finally { setSubmitting(false) }
   }
 
-  async function handleDelete() { if (!deleteTarget) return; await deletePlan(deleteTarget.id); setDeleteTarget(null); load() }
+  async function handleDelete() {
+    if (!deleteTarget) return
+    try {
+      await deletePlan(deleteTarget.id)
+      setDeleteTarget(null)
+      load()
+    } catch {
+      setError('Failed to delete plan')
+    }
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Plans</h1>
-        <Button size="sm" className="min-h-[44px]" onClick={() => setAddOpen(true)}><Plus className="h-5 w-5" /></Button>
+        <Button size="sm" className="min-h-[44px]" onClick={() => setAddOpen(true)} aria-label="Add plan"><Plus className="h-5 w-5" /></Button>
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
@@ -88,7 +97,7 @@ export default function PlansMobile() {
               <div key={plan.id} className={cn('rounded-xl border p-4 space-y-2', style.bg, style.border)} onClick={() => { setEditing(plan); setEditF({ title: plan.title, content: plan.content ?? '', color: plan.color }) }}>
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-medium text-sm">{plan.title}</h3>
-                  <button onClick={e => { e.stopPropagation(); setDeleteTarget(plan) }} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-black/10 text-muted-foreground hover:text-red-500 shrink-0"><X className="h-4 w-4" /></button>
+                  <button onClick={e => { e.stopPropagation(); setDeleteTarget(plan) }} aria-label={`Delete plan "${plan.title}"`} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-black/10 text-muted-foreground hover:text-destructive shrink-0"><X className="h-4 w-4" /></button>
                 </div>
                 {plan.content && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{plan.content}</p>}
                 <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" />{formatDate(plan.created_at)}</p>
