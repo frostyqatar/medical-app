@@ -75,7 +75,6 @@ function Sidebar() {
           <NavLink
             key={item.to}
             to={item.to}
-            aria-current={({ isActive }: { isActive: boolean }) => isActive ? 'page' : undefined}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
@@ -139,7 +138,6 @@ function MobileNav() {
           <NavLink
             key={item.to}
             to={item.to}
-            aria-current={({ isActive }: { isActive: boolean }) => isActive ? 'page' : undefined}
             className={({ isActive }) =>
               cn(
                 'flex flex-col items-center justify-center gap-0.5 min-w-[64px] min-h-[52px] px-2 py-1.5 text-[11px] font-medium transition-colors shrink-0 snap-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
