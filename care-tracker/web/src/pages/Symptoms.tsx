@@ -14,10 +14,19 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Stethoscope, Plus, AlertTriangle, X } from 'lucide-react';
 import { fetchSymptoms, fetchSymptomTypes, createSymptom, deleteSymptom } from '@/api';
 import type { Symptom } from '@/api';
+import { toast } from '@/hooks/use-toast';
 
 const COMMON_TYPES = [
   'phantom limb pain',
@@ -60,12 +69,18 @@ function getSeverityBadgeVariant(value: number): 'secondary' | 'destructive' {
   return 'destructive';
 }
 
+function getSeverityLabel(value: number) {
+  if (value <= 3) return 'Mild';
+  if (value <= 6) return 'Moderate';
+  return 'Severe';
+}
+
 function SeverityBar({ value }: { value: number }) {
   const color = getSeverityColor(value);
   return (
     <div className="flex items-center gap-2">
       <Badge variant={getSeverityBadgeVariant(value)} className="tabular-nums shrink-0">
-        {value}/10
+        {value}/10 {getSeverityLabel(value)}
       </Badge>
       <div className="h-2 w-16 rounded-full bg-muted overflow-hidden">
         <div
@@ -87,6 +102,7 @@ export default function SymptomsPage() {
   const [timeRange, setTimeRange] = useState('7');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Symptom | null>(null);
 
   const loadSymptoms = useCallback(
     async (days?: number, type?: string) => {
@@ -144,6 +160,20 @@ export default function SymptomsPage() {
       setError('Failed to record symptom');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    try {
+      await deleteSymptom(target.id);
+      const days = timeRange === 'all' ? undefined : Number(timeRange);
+      const type = selectedType === 'all' ? undefined : selectedType;
+      loadSymptoms(days, type);
+    } catch {
+      toast({ variant: 'destructive', title: 'Failed to delete symptom entry' });
     }
   }
 
@@ -318,13 +348,8 @@ export default function SymptomsPage() {
                       <div className="flex items-center gap-1 shrink-0">
                         <SeverityBar value={severityNum} />
                         <button
-                          onClick={async () => {
-                            if (!window.confirm('Delete this symptom entry?')) return;
-                            await deleteSymptom(symptom.id);
-                            const days = timeRange === 'all' ? undefined : Number(timeRange);
-                            const type = selectedType === 'all' ? undefined : selectedType;
-                            loadSymptoms(days, type);
-                          }}
+                          onClick={() => setDeleteTarget(symptom)}
+                          aria-label={`Delete ${symptom.type} entry`}
                           className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 shrink-0"
                         >
                           <X className="h-4 w-4" />
@@ -338,6 +363,26 @@ export default function SymptomsPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Symptom Entry</DialogTitle>
+            <DialogDescription>
+              This will permanently delete this symptom entry. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteTarget && (
+            <p className="text-sm font-medium py-2">
+              {deleteTarget.type} &middot; {deleteTarget.severity}/10 &middot; {formatDateTime(deleteTarget.noted_at)}
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" className="min-h-[44px]" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" className="min-h-[44px]" onClick={handleDelete}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
