@@ -60,7 +60,14 @@ export default function AppointmentsMobile() {
     try { await updateAppointment(doneTarget.id, { status: 'done', outcome: doneOutcome.trim() || undefined }); setDoneTarget(null); setDoneOutcome(''); load() } catch { setError('Failed') } finally { setSubmitting(false) }
   }
 
-  async function handleCancel(appt: Appointment) { await updateAppointment(appt.id, { status: 'cancelled' }); load() }
+  async function handleCancel(appt: Appointment) {
+    try {
+      await updateAppointment(appt.id, { status: 'cancelled' })
+      load()
+    } catch {
+      setError('Failed to cancel appointment')
+    }
+  }
 
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault()
@@ -100,7 +107,7 @@ export default function AppointmentsMobile() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Appointments</h1>
-        <Button size="sm" className="min-h-[44px]" onClick={() => setAddOpen(true)}><Plus className="h-5 w-5" /></Button>
+        <Button size="sm" className="min-h-[44px]" onClick={() => setAddOpen(true)} aria-label="Add appointment"><Plus className="h-5 w-5" /></Button>
       </div>
 
       <Tabs value={tab} onValueChange={v => setTab(v as typeof tab)}>
@@ -151,13 +158,13 @@ export default function AppointmentsMobile() {
                   </div>
                   {appt.status === 'planned' && (
                     <div className="flex items-center gap-1 shrink-0">
-                      <Button variant="outline" size="sm" className="min-h-[44px] min-w-[44px] p-0" onClick={() => openEdit(appt)}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="outline" size="sm" className="min-h-[44px] min-w-[44px] p-0" onClick={() => setDoneTarget(appt)}><CheckCircle2 className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="sm" className="min-h-[44px] min-w-[44px] p-0 text-muted-foreground" onClick={() => handleCancel(appt)}><XCircle className="h-4 w-4" /></Button>
+                      <Button variant="outline" size="sm" className="min-h-[44px] min-w-[44px] p-0" onClick={() => openEdit(appt)} aria-label={`Edit ${appt.specialty} appointment`}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="outline" size="sm" className="min-h-[44px] min-w-[44px] p-0" onClick={() => setDoneTarget(appt)} aria-label={`Mark ${appt.specialty} appointment as done`}><CheckCircle2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" className="min-h-[44px] min-w-[44px] p-0 text-muted-foreground" onClick={() => handleCancel(appt)} aria-label={`Cancel ${appt.specialty} appointment`}><XCircle className="h-4 w-4" /></Button>
                     </div>
                   )}
                   {appt.status !== 'planned' && (
-                    <Button variant="outline" size="sm" className="min-h-[44px] min-w-[44px] p-0" onClick={() => openEdit(appt)}>
+                    <Button variant="outline" size="sm" className="min-h-[44px] min-w-[44px] p-0" onClick={() => openEdit(appt)} aria-label={`Edit ${appt.specialty} appointment`}>
                       <Pencil className="h-4 w-4" />
                     </Button>
                   )}
