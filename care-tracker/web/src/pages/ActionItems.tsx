@@ -518,7 +518,7 @@ export default function ActionItems() {
                       <Card className="border shadow-none">
                         <CardContent className="p-3 sm:p-4 space-y-2">
                           <div className="flex items-start gap-2">
-                            <div className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground mt-0.5 p-2 -m-2 hidden sm:flex items-center justify-center">
+                            <div className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground mt-0.5 p-2 -m-2 hidden sm:flex items-center justify-center" aria-hidden="true">
                               <GripVertical className="h-4 w-4" />
                             </div>
                             <PriorityBadge priority={item.priority} />
@@ -527,7 +527,7 @@ export default function ActionItems() {
                                 {item.category}
                               </Badge>
                             )}
-                            <Button variant="ghost" size="icon" className="h-11 w-11 ml-auto text-muted-foreground hover:text-red-500" onClick={() => setDeleteTarget(item)} title="Delete"><Trash2 className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" className="h-11 w-11 ml-auto text-muted-foreground hover:text-destructive" onClick={() => setDeleteTarget(item)} title="Delete" aria-label="Delete action item"><Trash2 className="h-4 w-4" /></Button>
                           </div>
 
                           {editingItemId === item.id ? (
@@ -635,6 +635,7 @@ export default function ActionItems() {
                                   className="h-11 w-11"
                                   onClick={() => handleMove(item, 'answered')}
                                   disabled={movingId === item.id}
+                                  aria-label="Move to Answered"
                                 >
                                   <ArrowRight className="h-4 w-4" />
                                 </Button>
@@ -647,6 +648,7 @@ export default function ActionItems() {
                                     className="h-11 w-11"
                                     onClick={() => handleMove(item, 'open')}
                                     disabled={movingId === item.id}
+                                    aria-label="Move back to Open"
                                   >
                                     <ArrowLeft className="h-4 w-4" />
                                   </Button>
@@ -656,6 +658,7 @@ export default function ActionItems() {
                                     className="h-11 w-11"
                                     onClick={() => handleMove(item, 'done')}
                                     disabled={movingId === item.id}
+                                    aria-label="Mark as Done"
                                   >
                                     <CheckCircle2 className="h-4 w-4" />
                                   </Button>
@@ -668,6 +671,7 @@ export default function ActionItems() {
                                   className="h-11 w-11"
                                   onClick={() => handleMove(item, 'answered')}
                                   disabled={movingId === item.id}
+                                  aria-label="Move back to Answered"
                                 >
                                   <ArrowLeft className="h-4 w-4" />
                                 </Button>
