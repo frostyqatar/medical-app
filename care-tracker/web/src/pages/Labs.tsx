@@ -506,7 +506,7 @@ export default function LabsPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="lab-date">Date & Time</Label>
+                  <Label htmlFor="lab-date">Date &amp; Time</Label>
                   <Input
                     id="lab-date"
                     type="datetime-local"
@@ -734,7 +734,7 @@ export default function LabsPage() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <Button variant="ghost" size="icon" className="h-10 w-10 min-h-[40px] min-w-[40px] text-muted-foreground hover:text-red-500" onClick={() => setDeleteTarget(lab)} title="Delete this reading"><Trash2 className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="h-10 w-10 min-h-[40px] min-w-[40px] text-muted-foreground hover:text-destructive" onClick={() => setDeleteTarget(lab)} title="Delete this reading" aria-label={`Delete ${lab.test} reading`}><Trash2 className="h-4 w-4" /></Button>
                             </TableCell>
                           </TableRow>
                         );
@@ -941,7 +941,7 @@ export default function LabsPage() {
                           ) : lab.notes || <span className="text-muted-foreground italic">—</span>}
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500" onClick={(e) => { e.stopPropagation(); handleDeleteInModal(lab); }} title="Delete reading"><Trash2 className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteInModal(lab); }} title="Delete reading" aria-label={`Delete ${lab.test} reading`}><Trash2 className="h-3.5 w-3.5" /></Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -960,7 +960,7 @@ export default function LabsPage() {
                     <div key={lab.id} className="border rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">{formatDateTime(lab.measured_at)}</span>
-                        <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-red-500" onClick={(e) => { e.stopPropagation(); handleDeleteInModal(lab); }} title="Delete reading"><Trash2 className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteInModal(lab); }} title="Delete reading" aria-label={`Delete ${lab.test} reading`}><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div onClick={() => startEditing(lab.id, 'value', lab.value)} className="cursor-pointer hover:bg-accent/50 rounded px-1 -mx-1 py-0.5">
