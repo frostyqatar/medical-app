@@ -6,9 +6,12 @@ import App from './App.tsx'
 import { AuthProvider, useAuth } from './context/AuthContext.tsx'
 import { ChatProvider } from './context/ChatContext.tsx'
 import ChatWidget from './components/ChatWidget.tsx'
+import { Toaster } from './components/ui/toaster.tsx'
 import { useIsMobile } from './hooks/useIsMobile.ts'
 import Login from './pages/Login.tsx'
 import Emergency from './pages/Emergency.tsx'
+import Today from './pages/Today.tsx'
+import Wounds from './pages/Wounds.tsx'
 
 import Medications from './pages/Medications.tsx'
 import MedicationsMobile from './pages/MedicationsMobile.tsx'
@@ -63,11 +66,13 @@ createRoot(document.getElementById('root')!).render(
             <Route element={<RequireAuth />}>
               <Route element={<App />}>
                 <Route index element={<Navigate to="/medications" replace />} />
+                <Route path="today" element={<Today />} />
                 <Route path="medications" element={<MobileRoute desktop={Medications} mobile={MedicationsMobile} />} />
                 <Route path="vitals" element={<MobileRoute desktop={Vitals} mobile={VitalsMobile} />} />
                 <Route path="glucose" element={<MobileRoute desktop={Glucose} mobile={GlucoseMobile} />} />
                 <Route path="labs" element={<MobileRoute desktop={Labs} mobile={LabsMobile} />} />
                 <Route path="symptoms" element={<MobileRoute desktop={Symptoms} mobile={SymptomsMobile} />} />
+                <Route path="wounds" element={<Wounds />} />
                 <Route path="appointments" element={<MobileRoute desktop={Appointments} mobile={AppointmentsMobile} />} />
                 <Route path="action-items" element={<MobileRoute desktop={ActionItems} mobile={ActionItemsMobile} />} />
                 <Route path="weekly-summary" element={<MobileRoute desktop={WeeklySummary} mobile={WeeklySummaryMobile} />} />
@@ -78,6 +83,7 @@ createRoot(document.getElementById('root')!).render(
             </Route>
           </Routes>
           <ChatWidget />
+          <Toaster />
         </ChatProvider>
       </AuthProvider>
     </BrowserRouter>
