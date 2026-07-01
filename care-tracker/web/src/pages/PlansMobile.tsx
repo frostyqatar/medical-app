@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Plus, X, Clock, ClipboardList } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { fetchPlans, createPlan, updatePlan, deletePlan } from '@/api'
+import { usePlans } from '@/hooks/usePlans'
 import type { Plan } from '@/api'
 
 const COLORS = [
@@ -24,8 +24,7 @@ function formatDate(ts: string) { return new Date(ts).toLocaleDateString(undefin
 function getStyle(c: string) { return COLORS.find(x => x.value === c) ?? COLORS[0] }
 
 export default function PlansMobile() {
-  const [plans, setPlans] = useState<Plan[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { plans, error, create, update, remove } = usePlans()
   const [addOpen, setAddOpen] = useState(false)
   const [form, setForm] = useState({ title: '', content: '', color: 'default' })
   const [submitting, setSubmitting] = useState(false)
@@ -33,29 +32,24 @@ export default function PlansMobile() {
   const [editF, setEditF] = useState({ title: '', content: '', color: 'default' })
   const [deleteTarget, setDeleteTarget] = useState<Plan | null>(null)
 
-  async function load() { setPlans(null); try { setPlans(await fetchPlans()); setError(null) } catch { setError('Failed') } }
-
-  useEffect(() => { load() }, [])
-
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault(); if (!form.title.trim()) return; setSubmitting(true)
-    try { await createPlan({ title: form.title.trim(), content: form.content.trim() || undefined, color: form.color }); setForm({ title: '', content: '', color: 'default' }); setAddOpen(false); load() } catch { setError('Failed') } finally { setSubmitting(false) }
+    const ok = await create({ title: form.title.trim(), content: form.content.trim() || undefined, color: form.color })
+    if (ok) { setForm({ title: '', content: '', color: 'default' }); setAddOpen(false) }
+    setSubmitting(false)
   }
 
   async function handleSave(plan: Plan) {
     if (!editF.title.trim()) return; setSubmitting(true)
-    try { await updatePlan(plan.id, { title: editF.title.trim(), content: editF.content.trim() || '', color: editF.color }); setEditing(null); load() } catch { setError('Failed') } finally { setSubmitting(false) }
+    const ok = await update(plan.id, { title: editF.title.trim(), content: editF.content.trim() || '', color: editF.color })
+    if (ok) setEditing(null)
+    setSubmitting(false)
   }
 
   async function handleDelete() {
     if (!deleteTarget) return
-    try {
-      await deletePlan(deleteTarget.id)
-      setDeleteTarget(null)
-      load()
-    } catch {
-      setError('Failed to delete plan')
-    }
+    const ok = await remove(deleteTarget.id)
+    if (ok) setDeleteTarget(null)
   }
 
   return (
