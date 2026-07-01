@@ -65,7 +65,14 @@ export default function GlucoseMobile() {
     } catch { setError('Failed') } finally { setSubmitting(false) }
   }
 
-  async function handleDelete(id: number) { await deleteGlucose(id); load(range) }
+  async function handleDelete(id: number) {
+    try {
+      await deleteGlucose(id)
+      load(range)
+    } catch {
+      setError('Failed to delete reading')
+    }
+  }
 
   function startEdit(g: Glucose) {
     setEditingId(g.id)
@@ -228,8 +235,8 @@ export default function GlucoseMobile() {
                     {g.notes && <p className="text-xs text-muted-foreground truncate mt-0.5">{g.notes}</p>}
                   </div>
                   <div className="flex gap-1 shrink-0">
-                    <button onClick={() => startEdit(g)} className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-primary"><Pencil className="h-4 w-4" /></button>
-                    <button onClick={() => handleDelete(g.id)} className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-red-500 shrink-0"><X className="h-4 w-4" /></button>
+                    <button onClick={() => startEdit(g)} aria-label={`Edit glucose reading of ${g.value_mgdl}`} className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-primary"><Pencil className="h-4 w-4" /></button>
+                    <button onClick={() => handleDelete(g.id)} aria-label={`Delete glucose reading of ${g.value_mgdl}`} className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-destructive shrink-0"><X className="h-4 w-4" /></button>
                   </div>
                   </div>
                   )}
