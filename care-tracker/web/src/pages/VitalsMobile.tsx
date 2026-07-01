@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Activity, Heart, Thermometer, Waves, Scale, X, Pencil, ChevronDown, ChevronUp } from 'lucide-react'
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend, ReferenceArea, Brush } from 'recharts'
 import { fetchVitals, fetchLatestVitals, createVital, deleteVital, updateVital } from '@/api'
@@ -60,6 +60,7 @@ export default function VitalsMobile() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [editing, setEditing] = useState<Vital | null>(null)
   const [editForm, setEditForm] = useState(EMPTY_FORM)
+  const [deleteTarget, setDeleteTarget] = useState<Vital | null>(null)
 
   const load = useCallback(async (days: number) => {
     setVitals(null)
@@ -122,7 +123,17 @@ export default function VitalsMobile() {
     } catch { setError('Failed to update') } finally { setSubmitting(false) }
   }
 
-  async function handleDelete(id: number) { await deleteVital(id); loadAll() }
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return
+    const target = deleteTarget
+    setDeleteTarget(null)
+    try {
+      await deleteVital(target.id)
+      loadAll()
+    } catch {
+      setError('Failed to delete vitals reading')
+    }
+  }
 
   const sorted = vitals ? [...vitals].sort((a, b) => new Date(b.measured_at).getTime() - new Date(a.measured_at).getTime()) : []
   const chartData = vitals ? [...vitals].sort((a, b) => new Date(a.measured_at).getTime() - new Date(b.measured_at).getTime()).map((v, i) => ({
@@ -407,8 +418,8 @@ export default function VitalsMobile() {
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <span className="text-[11px] text-muted-foreground">{formatDateTime(v.measured_at)}</span>
                     <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={() => openEdit(v)} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-primary"><Pencil className="h-4 w-4" /></button>
-                      <button onClick={() => handleDelete(v.id)} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-red-500"><X className="h-4 w-4" /></button>
+                      <button onClick={() => openEdit(v)} aria-label={`Edit vitals reading from ${formatDateTime(v.measured_at)}`} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-primary"><Pencil className="h-4 w-4" /></button>
+                      <button onClick={() => setDeleteTarget(v)} aria-label={`Delete vitals reading from ${formatDateTime(v.measured_at)}`} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-xs">
@@ -450,6 +461,20 @@ export default function VitalsMobile() {
               </DialogFooter>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Vitals Reading</DialogTitle>
+            <DialogDescription>This will permanently delete this vitals reading. This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          {deleteTarget && <p className="text-sm font-medium py-2">{formatDateTime(deleteTarget.measured_at)}</p>}
+          <DialogFooter>
+            <Button variant="outline" className="min-h-[44px]" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" className="min-h-[44px]" onClick={handleConfirmDelete}>Delete</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
