@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -7,48 +7,36 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { StickyNote, X, Clock } from 'lucide-react'
-import { fetchGoodTracking, createGoodTracking, updateGoodTracking, deleteGoodTracking } from '@/api'
+import { useGoodTracking } from '@/hooks/useGoodTracking'
 import type { GoodTracking } from '@/api'
 
 function formatDate(ts: string) { return new Date(ts).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }
 
 export default function NotesMobile() {
-  const [items, setItems] = useState<GoodTracking[] | null>(null)
   const [timeRange, setTimeRange] = useState('7')
+  const { items, error, create, update, remove } = useGoodTracking(timeRange === 'all' ? undefined : Number(timeRange))
   const [formNote, setFormNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editNote, setEditNote] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<GoodTracking | null>(null)
 
-  const load = useCallback(async (days?: number) => { setItems(null); try { setItems(await fetchGoodTracking(days)); setError(null) } catch { setError('Failed') } }, [])
-  useEffect(() => { load(timeRange === 'all' ? undefined : Number(timeRange)) }, [timeRange, load])
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); if (!formNote.trim()) return; setSubmitting(true)
-    try { await createGoodTracking({ note: formNote.trim(), created_at: new Date().toISOString() }); setFormNote(''); load(timeRange === 'all' ? undefined : Number(timeRange)) } catch { setError('Failed') } finally { setSubmitting(false) }
+    const ok = await create(formNote.trim())
+    if (ok) setFormNote('')
+    setSubmitting(false)
   }
 
   async function handleSave(item: GoodTracking) {
-    try {
-      await updateGoodTracking(item.id, { note: editNote.trim() })
-      setEditingId(null)
-      load(timeRange === 'all' ? undefined : Number(timeRange))
-    } catch {
-      setError('Failed to save note')
-    }
+    const ok = await update(item.id, editNote.trim())
+    if (ok) setEditingId(null)
   }
 
   async function handleDelete() {
     if (!deleteTarget) return
-    try {
-      await deleteGoodTracking(deleteTarget.id)
-      setDeleteTarget(null)
-      load(timeRange === 'all' ? undefined : Number(timeRange))
-    } catch {
-      setError('Failed to delete note')
-    }
+    const ok = await remove(deleteTarget.id)
+    if (ok) setDeleteTarget(null)
   }
 
   return (
