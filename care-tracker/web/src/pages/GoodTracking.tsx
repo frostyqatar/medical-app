@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,7 +15,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { StickyNote, Plus, X, Clock } from 'lucide-react';
-import { fetchGoodTracking, createGoodTracking, updateGoodTracking, deleteGoodTracking } from '@/api';
+import { useGoodTracking } from '@/hooks/useGoodTracking';
 import type { GoodTracking } from '@/api';
 
 function formatDate(ts: string) {
@@ -36,11 +36,10 @@ const TIME_RANGES = [
 ] as const;
 
 export default function NotesPage() {
-  const [items, setItems] = useState<GoodTracking[] | null>(null);
-  const [formNote, setFormNote] = useState('');
   const [timeRange, setTimeRange] = useState('7');
+  const { items, error, create, update, remove } = useGoodTracking(timeRange === 'all' ? undefined : Number(timeRange));
+  const [formNote, setFormNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editNote, setEditNote] = useState('');
@@ -49,37 +48,13 @@ export default function NotesPage() {
   const [deleteTarget, setDeleteTarget] = useState<GoodTracking | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  const loadItems = useCallback(async (days?: number) => {
-    setItems(null);
-    try {
-      const data = await fetchGoodTracking(days);
-      setItems(data);
-      setError(null);
-    } catch {
-      setError('Failed to load notes');
-    }
-  }, []);
-
-  useEffect(() => {
-    const days = timeRange === 'all' ? undefined : Number(timeRange);
-    loadItems(days);
-  }, [timeRange, loadItems]);
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!formNote.trim()) return;
     setSubmitting(true);
-    setError(null);
-    try {
-      await createGoodTracking({ note: formNote.trim(), created_at: new Date().toISOString() });
-      setFormNote('');
-      const days = timeRange === 'all' ? undefined : Number(timeRange);
-      loadItems(days);
-    } catch {
-      setError('Failed to add note');
-    } finally {
-      setSubmitting(false);
-    }
+    const ok = await create(formNote.trim());
+    if (ok) setFormNote('');
+    setSubmitting(false);
   }
 
   function startEdit(item: GoodTracking) {
@@ -95,17 +70,9 @@ export default function NotesPage() {
   async function handleSaveEdit(item: GoodTracking) {
     if (!editNote.trim()) return;
     setSavingId(item.id);
-    try {
-      await updateGoodTracking(item.id, { note: editNote.trim() });
-      setEditingId(null);
-      setEditNote('');
-      const days = timeRange === 'all' ? undefined : Number(timeRange);
-      loadItems(days);
-    } catch {
-      setError('Failed to save note');
-    } finally {
-      setSavingId(null);
-    }
+    const ok = await update(item.id, editNote.trim());
+    if (ok) { setEditingId(null); setEditNote(''); }
+    setSavingId(null);
   }
 
   function handleEditKeyDown(e: React.KeyboardEvent, item: GoodTracking) {
@@ -121,16 +88,9 @@ export default function NotesPage() {
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeletingId(deleteTarget.id);
-    try {
-      await deleteGoodTracking(deleteTarget.id);
-      setDeleteTarget(null);
-      const days = timeRange === 'all' ? undefined : Number(timeRange);
-      loadItems(days);
-    } catch {
-      setError('Failed to delete note');
-    } finally {
-      setDeletingId(null);
-    }
+    const ok = await remove(deleteTarget.id);
+    if (ok) setDeleteTarget(null);
+    setDeletingId(null);
   }
 
   return (
@@ -248,7 +208,8 @@ export default function NotesPage() {
                           e.stopPropagation();
                           setDeleteTarget(item);
                         }}
-                        className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 shrink-0"
+                        aria-label="Delete note"
+                        className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-red-50 text-muted-foreground hover:text-destructive shrink-0"
                       >
                         <X className="h-4 w-4" />
                       </button>
