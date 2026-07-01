@@ -15,9 +15,18 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Bandage, AlertTriangle, Image, Calendar, X } from 'lucide-react';
 import { fetchWounds, fetchWoundSites, createWound, deleteWound } from '@/api';
 import type { Wound } from '@/api';
+import { toast } from '@/hooks/use-toast';
 
 type WoundFormData = {
   site: string;
@@ -64,6 +73,7 @@ export default function WoundsPage() {
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState<WoundFormData>({ ...EMPTY_FORM });
+  const [deleteTarget, setDeleteTarget] = useState<Wound | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -131,6 +141,18 @@ export default function WoundsPage() {
     }
   }
 
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    try {
+      await deleteWound(target.id);
+      loadData();
+    } catch {
+      toast({ variant: 'destructive', title: 'Failed to delete wound entry' });
+    }
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Wounds</h1>
@@ -194,11 +216,8 @@ export default function WoundsPage() {
                               </Badge>
                             )}
                             <button
-                              onClick={async () => {
-                                if (!window.confirm('Delete this wound entry?')) return;
-                                await deleteWound(w.id);
-                                loadData();
-                              }}
+                              onClick={() => setDeleteTarget(w)}
+                              aria-label={`Delete wound entry from ${formatDate(w.assessed_at)}`}
                               className="p-0.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 shrink-0"
                             >
                               <X className="h-3.5 w-3.5" />
@@ -415,6 +434,26 @@ export default function WoundsPage() {
           </form>
         </CardContent>
       </Card>
+
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Wound Entry</DialogTitle>
+            <DialogDescription>
+              This will permanently delete this wound assessment. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteTarget && (
+            <p className="text-sm font-medium py-2">
+              {deleteTarget.site.replace(/_/g, ' ')} &middot; {formatDate(deleteTarget.assessed_at)}
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" className="min-h-[44px]" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" className="min-h-[44px]" onClick={handleDelete}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
