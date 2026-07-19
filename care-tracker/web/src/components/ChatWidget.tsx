@@ -13,16 +13,17 @@ interface Message {
 }
 
 const pageNames: Record<string, string> = {
-  '/today': 'Today (dashboard)',
+  '/today': 'Today',
   '/medications': 'Medications',
   '/vitals': 'Vitals',
   '/glucose': 'Glucose',
   '/labs': 'Labs',
-  '/wounds': 'Wounds',
   '/symptoms': 'Symptoms',
   '/appointments': 'Appointments',
   '/action-items': 'Action Items',
   '/weekly-summary': 'Weekly Summary',
+  '/notes': 'Notes',
+  '/plans': 'Plans',
   '/emergency': 'Emergency',
 }
 
@@ -256,13 +257,16 @@ export default function ChatWidget() {
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`
   }
 
+  // Keep login screen clean — hooks above still run consistently
+  if (location.pathname === '/login') return null
+
   return (
     <>
       {/* Panel — always mounted, animated with CSS transitions */}
       <div
         aria-hidden={!open}
         className={cn(
-          'fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] lg:bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] right-2 sm:right-5 z-50 w-[calc(100vw-2rem)] sm:w-[420px] max-h-[calc(100vh-7rem)] h-[580px] bg-background border rounded-xl shadow-2xl flex flex-col transition-all duration-200 origin-bottom-right',
+          'fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))] right-3 sm:right-5 z-50 w-[calc(100vw-1.5rem)] sm:w-[420px] max-h-[min(580px,calc(100vh-9rem))] h-[580px] bg-card border rounded-2xl shadow-lift flex flex-col transition-all duration-200 origin-bottom-right',
           open
             ? 'opacity-100 translate-y-0 scale-100'
             : 'opacity-0 translate-y-4 scale-95 pointer-events-none'
@@ -453,16 +457,18 @@ export default function ChatWidget() {
 
       {/* FAB */}
       <button
+        type="button"
+        aria-label={open ? 'Close AI assistant' : 'Open AI assistant'}
         onClick={() => setOpen(!open)}
         style={{
-          bottom: `max(calc(4.25rem + env(safe-area-inset-bottom, 0px)), 1.25rem)`,
+          bottom: `max(calc(4.75rem + env(safe-area-inset-bottom, 0px)), 1.25rem)`,
           right: '1.25rem',
         }}
         className={cn(
-          'fixed z-50 rounded-full p-3.5 shadow-lg transition-all duration-300 lg:bottom-[max(1.25rem,calc(env(safe-area-inset-bottom,16px)+0.25rem))]',
+          'fixed z-50 rounded-full p-3.5 shadow-lift transition-all duration-300 lg:bottom-6',
           open
-            ? 'bg-green-600 text-white hover:bg-green-700 shadow-green-500/25'
-            : 'bg-primary text-primary-foreground hover:shadow-xl'
+            ? 'bg-success text-success-foreground hover:bg-success/90'
+            : 'bg-primary text-primary-foreground hover:shadow-xl',
         )}
       >
         <MessageCircle className={cn('h-5 w-5 transition-transform duration-300', open && 'scale-110')} />

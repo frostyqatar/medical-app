@@ -11,6 +11,7 @@ import { fetchMedications, createMedication, updateMedication } from '@/api'
 import type { Medication } from '@/api'
 import { useChatContext } from '@/context/ChatContext'
 import { cn } from '@/lib/utils'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 const CATEGORIES: Record<string, string> = {
   'BP': 'Blood Pressure', 'heart/BP': 'Blood Pressure', 'antiplatelet': 'Cardiovascular', 'anticoagulant': 'Cardiovascular', 'vascular protective': 'Cardiovascular',
@@ -201,24 +202,27 @@ export default function MedicationsMobile() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="page-shell space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Medications</h1>
-        <div className="flex items-center gap-1.5">
-          <Button
-            size="sm"
-            variant={searchOpen ? 'secondary' : 'ghost'}
-            className="min-h-[44px] min-w-[44px] px-0"
-            onClick={() => { setSearchOpen(o => !o); setSearchQuery('') }}
-          >
-            <Search className="h-4 w-4" />
-          </Button>
-          <Button size="sm" className="min-h-[44px]" onClick={() => setAddOpen(true)}>
-            <Plus className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Medications"
+        description="Search, log, and manage the list."
+        actions={
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="touchIcon"
+              variant={searchOpen ? 'secondary' : 'outline'}
+              aria-label="Search medications"
+              onClick={() => { setSearchOpen(o => !o); setSearchQuery('') }}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+            <Button size="touchIcon" aria-label="Add medication" onClick={() => setAddOpen(true)}>
+              <Plus className="h-5 w-5" />
+            </Button>
+          </div>
+        }
+      />
 
       {/* Search Input */}
       {searchOpen && (

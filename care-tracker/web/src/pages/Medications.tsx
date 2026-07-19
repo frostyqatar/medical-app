@@ -41,6 +41,7 @@ import {
 } from '@/api';
 import type { Medication, AdherenceRow, MedicationLog } from '@/api';
 import { usePageContext } from '@/context/ChatContext';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 const CATEGORIES: Record<string, string> = {
   'BP': 'Blood Pressure', 'heart/BP': 'Blood Pressure', 'antiplatelet': 'Cardiovascular', 'anticoagulant': 'Cardiovascular', 'vascular protective': 'Cardiovascular',
@@ -228,15 +229,21 @@ export default function Medications() {
     : null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Medications</h1>
-        <Button size="sm" className="min-h-[44px]" onClick={startNewMed}><Plus className="h-4 w-4" />Add Medication</Button>
-      </div>
+    <div className="page-shell">
+      <PageHeader
+        title="Medications"
+        description="Today’s schedule, adherence, and the full active list."
+        actions={
+          <Button size="touch" onClick={startNewMed}>
+            <Plus className="h-4 w-4" />
+            Add medication
+          </Button>
+        }
+      />
 
       {/* Adherence Summary */}
-      <Card>
-        <CardHeader className="pb-3"><div className="flex items-center gap-2"><Pill className="h-5 w-5 text-muted-foreground" /><CardTitle className="text-base">Overall Adherence (7 days)</CardTitle></div></CardHeader>
+      <Card className="shadow-sm rounded-xl">
+        <CardHeader className="pb-3"><div className="flex items-center gap-2"><Pill className="h-5 w-5 text-primary" /><CardTitle className="text-base">Overall adherence (7 days)</CardTitle></div></CardHeader>
         <CardContent>
           {adherence === null ? <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-2 w-full" /></div>
           : overallAdherence === null ? <p className="text-sm text-muted-foreground py-2">No adherence data available.</p>
