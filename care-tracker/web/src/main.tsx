@@ -30,7 +30,6 @@ import Notes from './pages/GoodTracking.tsx'
 import NotesMobile from './pages/NotesMobile.tsx'
 import Plans from './pages/Plans.tsx'
 import PlansMobile from './pages/PlansMobile.tsx'
-import FamilyGuide from './pages/family-guide/FamilyGuide.tsx'
 
 function RequireAuth() {
   const { isAuthenticated, loading } = useAuth()
@@ -63,8 +62,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/login" element={<Login />} />
             <Route element={<RequireAuth />}>
               <Route element={<App />}>
-                <Route index element={<Navigate to="/family-guide" replace />} />
-                <Route path="family-guide" element={<FamilyGuide />} />
+                <Route index element={<Navigate to="/medications" replace />} />
                 <Route path="medications" element={<MobileRoute desktop={Medications} mobile={MedicationsMobile} />} />
                 <Route path="vitals" element={<MobileRoute desktop={Vitals} mobile={VitalsMobile} />} />
                 <Route path="glucose" element={<MobileRoute desktop={Glucose} mobile={GlucoseMobile} />} />

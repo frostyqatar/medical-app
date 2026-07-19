@@ -14,7 +14,6 @@ interface Message {
 
 const pageNames: Record<string, string> = {
   '/today': 'Today (dashboard)',
-  '/family-guide': 'Family Care Guide',
   '/medications': 'Medications',
   '/vitals': 'Vitals',
   '/glucose': 'Glucose',

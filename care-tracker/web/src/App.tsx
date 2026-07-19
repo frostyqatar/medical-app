@@ -14,7 +14,6 @@ import {
   Download,
   LogOut,
   AlertTriangle,
-  BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fetchPatient, fetchExport } from '@/api';
@@ -22,7 +21,6 @@ import { useAuth } from '@/context/AuthContext';
 import type { Patient } from '@/api';
 
 const NAV_ITEMS = [
-  { to: '/family-guide', label: 'Guide', icon: BookOpen },
   { to: '/medications', label: 'Meds', icon: Pill },
   { to: '/vitals', label: 'Vitals', icon: Activity },
   { to: '/glucose', label: 'Glucose', icon: Droplet },
@@ -170,21 +168,14 @@ function MobileNav() {
 }
 
 export default function App() {
-  const location = useLocation();
-  const isFamilyGuide = location.pathname === '/family-guide';
-
   return (
     <div className="flex min-h-screen">
       <Sidebar />
       <MobileNav />
       <main className="flex-1 lg:pl-60 pb-20 lg:pb-0">
-        {isFamilyGuide ? (
+        <div className="container py-6 px-4 md:px-6 lg:px-8">
           <Outlet />
-        ) : (
-          <div className="container py-6 px-4 md:px-6 lg:px-8">
-            <Outlet />
-          </div>
-        )}
+        </div>
       </main>
     </div>
   );
