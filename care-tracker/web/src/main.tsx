@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider, useAuth } from './context/AuthContext.tsx'
@@ -9,6 +9,7 @@ import ChatWidget from './components/ChatWidget.tsx'
 import { useIsMobile } from './hooks/useIsMobile.ts'
 import Login from './pages/Login.tsx'
 import Emergency from './pages/Emergency.tsx'
+import Today from './pages/Today.tsx'
 
 import Medications from './pages/Medications.tsx'
 import MedicationsMobile from './pages/MedicationsMobile.tsx'
@@ -33,6 +34,7 @@ import PlansMobile from './pages/PlansMobile.tsx'
 
 function RequireAuth() {
   const { isAuthenticated, loading } = useAuth()
+  const location = useLocation()
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -43,7 +45,9 @@ function RequireAuth() {
       </div>
     )
   }
-  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  }
   return <Outlet />
 }
 
@@ -62,7 +66,8 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/login" element={<Login />} />
             <Route element={<RequireAuth />}>
               <Route element={<App />}>
-                <Route index element={<Navigate to="/medications" replace />} />
+                <Route index element={<Navigate to="/today" replace />} />
+                <Route path="today" element={<Today />} />
                 <Route path="medications" element={<MobileRoute desktop={Medications} mobile={MedicationsMobile} />} />
                 <Route path="vitals" element={<MobileRoute desktop={Vitals} mobile={VitalsMobile} />} />
                 <Route path="glucose" element={<MobileRoute desktop={Glucose} mobile={GlucoseMobile} />} />

@@ -1,16 +1,26 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Activity, Eye, EyeOff } from 'lucide-react';
+import { Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Activity, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+
+  const from = (location.state as { from?: string } | null)?.from || '/today';
+
+  if (!authLoading && isAuthenticated) {
+    return <Navigate to={from} replace />;
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -18,7 +28,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(username, password);
-      navigate('/medications', { replace: true });
+      navigate(from, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -27,25 +37,38 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
-      <div className="w-full max-w-sm">
+    <div className="relative min-h-screen flex items-center justify-center px-4 py-10 overflow-hidden">
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 70% 50% at 20% 0%, hsl(173 55% 28% / 0.12), transparent 55%), radial-gradient(ellipse 50% 40% at 100% 100%, hsl(32 90% 42% / 0.08), transparent 50%), hsl(var(--background))',
+        }}
+      />
+
+      <div className="relative w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
-          <Activity className="h-12 w-12 text-primary mx-auto mb-3" />
-          <h1 className="text-2xl font-bold tracking-tight">Care Tracker</h1>
-          <p className="text-sm text-muted-foreground mt-1">Sign in to continue</p>
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lift">
+            <Activity className="h-7 w-7" />
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight">Care Tracker</h1>
+          <p className="text-sm text-muted-foreground mt-1.5">
+            Sign in to continue caring for PT-ANON
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 bg-card rounded-xl border p-6 shadow-sm">
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium mb-1.5">
-              Username
-            </label>
-            <input
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 rounded-2xl border bg-card p-6 shadow-soft sm:p-7"
+        >
+          <div className="space-y-2">
+            <Label htmlFor="username">Username</Label>
+            <Input
               id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-md border bg-background px-3 py-2.5 text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              className="h-11"
               placeholder="Enter username"
               autoComplete="username"
               autoCapitalize="off"
@@ -54,46 +77,50 @@ export default function Login() {
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-1.5">
-              Password
-            </label>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
             <div className="relative">
-              <input
+              <Input
                 id="password"
                 type={showPass ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-md border bg-background pl-3 pr-11 py-2.5 text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                className="h-11 pr-12"
                 placeholder="Enter password"
                 autoComplete="current-password"
                 required
               />
-              <button
+              <Button
                 type="button"
-                className="absolute right-1 top-1/2 -translate-y-1/2 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-muted-foreground hover:text-foreground"
+                variant="ghost"
+                size="touchIcon"
+                className="absolute right-0.5 top-1/2 -translate-y-1/2 text-muted-foreground"
                 onClick={() => setShowPass(!showPass)}
-                tabIndex={-1}
+                aria-label={showPass ? 'Hide password' : 'Show password'}
               >
                 {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+              </Button>
             </div>
           </div>
 
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+            <div
+              role="alert"
+              className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+            >
               {error}
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-primary text-primary-foreground font-medium text-sm py-2.5 min-h-[44px] hover:opacity-90 disabled:opacity-50 transition-opacity"
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
+          <Button type="submit" size="touch" className="w-full" disabled={loading}>
+            {loading ? 'Signing in…' : 'Sign in'}
+          </Button>
         </form>
+
+        <p className="mt-5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+          <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+          Private session · auto-locks after inactivity
+        </p>
       </div>
     </div>
   );

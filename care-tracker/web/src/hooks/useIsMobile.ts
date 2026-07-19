@@ -1,27 +1,19 @@
 import { useState, useEffect } from 'react'
 
+/** Align with Tailwind `lg` (1024) so shell and page layouts stay in sync. */
+const MOBILE_MQ = '(max-width: 1023px)'
+
 export function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(MOBILE_MQ).matches : false,
+  )
 
   useEffect(() => {
-    let cancelled = false
-    const ua = navigator.userAgent.toLowerCase()
-    const isIOS = /iphone|ipod/.test(ua)
-    const isAndroid = /android/.test(ua) && /mobile/.test(ua)
-    const isTouch = isIOS || isAndroid || window.innerWidth < 768
-
-    if (!cancelled) setIsMobile(isTouch)
-
-    function handleResize() {
-      const touchNow = isIOS || isAndroid || window.innerWidth < 768
-      if (!cancelled) setIsMobile(touchNow)
-    }
-
-    window.addEventListener('resize', handleResize)
-    return () => {
-      cancelled = true
-      window.removeEventListener('resize', handleResize)
-    }
+    const mq = window.matchMedia(MOBILE_MQ)
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
   }, [])
 
   return isMobile
